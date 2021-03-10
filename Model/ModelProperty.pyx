@@ -1,5 +1,5 @@
 from Error.PropertyError import *
-from .DataModel import *
+import Model.DataModel
 from enum import Enum
 
 cdef class NullDefault:
@@ -7,43 +7,44 @@ cdef class NullDefault:
 
 cdef NullDefault _null = NullDefault()
 
-cdef class BaseProperty:
-    Type: type
-    cdef public str name
-    cdef type _Type
-    cdef public bint isPk
-    cdef public bint Null
-    cdef object default
-    cdef public str targetType
 
-    def __cinit__(self,
+
+cdef struct FilterCell:
+    char * name
+    char * operator
+    char * value
+
+
+cdef class BaseProperty:
+
+
+    def __init__(self,
                   str name = None,
                   bint pk = False,
-                  object default = _null,
+                  default = _null,
                   bint Null = True,
                   *args, **kwargs):
 
         if name:
             self.name = name
-
         self._Type = self.Type
         self.isPk = pk
         self.Null = Null
-        self.default = default
+        self._default = default
         self._init(*args, **kwargs)
 
     def _init(*args, **kwargs):
         pass
 
     def __set_name__(self, owner, name: str) -> None:
-        if not issubclass(owner, DataModel):
+        if not issubclass(owner, Model.DataModel.DataModel):
             raise PropertyUsageError(owner)
         self.name = name
 
-    cpdef public bint sizeChecker(self,object value):
+    cpdef public bint sizeChecker(self, object value):
         return True
 
-    cpdef public bint verifier(self,object value):
+    cpdef public bint verifier(self, object value):
         if isinstance(value, self._Type):
             return self.sizeChecker(value)
         try:
@@ -52,15 +53,19 @@ cdef class BaseProperty:
         except Exception:
             raise PropertyVerifyError(value, self._Type)
 
-    cpdef public toDBValue(self, value):
+    cdef public toDBValue(self, value):
         return value if value else 'null'
 
-    cpdef public toObjValue(self, value):
+    cdef public toObjValue(self, value):
         return value
 
     @property
     def hasDefault(self):
         return not self.default == _null
+
+    @property
+    def Default(self):
+        return self.default
 
     @property
     def dbName(self) -> str:
@@ -80,7 +85,7 @@ class IntProperty(BaseProperty):
     Type: type = int
     supportType: intSupportType = intSupportType
 
-    def _init(self, targetType: intSupportType = intSupportType.varchar, *args, **kwargs):
+    def _init(self, targetType: intSupportType = intSupportType.int, *args, **kwargs):
         self.targetType = targetType
 
 
@@ -112,7 +117,6 @@ class FloatProperty(BaseProperty):
     def _init(self, targetType: floatSupportType = floatSupportType.float, tuple size = None, *args, **kwargs):
         self.targetType = targetType
         self.size = size
-
 
 
 class boolSupportType(Enum):
