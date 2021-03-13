@@ -1,3 +1,4 @@
+# cython: c_string_type=unicode, c_string_encoding=utf8
 from Error.PropertyError import *
 import Model.DataModel
 from enum import Enum
@@ -7,23 +8,26 @@ cdef class NullDefault:
 
 cdef NullDefault _null = NullDefault()
 
+cdef class FilterListCell:
+    def __init__(self, char *cell = '', Relationship relationship = Relationship.NONE):
+        if <str>cell == '':
+            raise
+        self.value = cell
+        self.relationship = relationship
+        self.next = None
 
-
-cdef struct FilterCell:
-    char * name
-    char * operator
-    char * value
-
+    cdef FilterListCell append(self, FilterListCell cell):
+        if self.next:
+            return self.next.append(cell)
+        self.next = cell
 
 cdef class BaseProperty:
-
-
     def __init__(self,
-                  str name = None,
-                  bint pk = False,
-                  default = _null,
-                  bint Null = True,
-                  *args, **kwargs):
+                 str name = None,
+                 bint pk = False,
+                 default = _null,
+                 bint Null = True,
+                 *args, **kwargs):
 
         if name:
             self.name = name

@@ -14,7 +14,19 @@ cdef class BaseProperty:
     cdef public toDBValue(self, value)
     cdef public toObjValue(self, value)
 
-cdef struct FilterCell:
-    char * name
-    char * operator
-    char * value
+cdef enum Relationship:
+    AND
+    OR
+    EQUAL
+    BIGGER
+    SMALLER
+    NOTEQUAL
+    NONE
+
+
+cdef class FilterListCell:
+    cdef char * value
+    cdef Relationship relationship
+    cdef FilterListCell next
+
+    cdef FilterListCell append(self, FilterListCell cell)
