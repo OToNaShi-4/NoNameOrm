@@ -1,5 +1,5 @@
 from typing import Optional, Type, List
-from .ModelProperty import BaseProperty
+from .ModelProperty import BaseProperty,NullDefault
 from DB.DB import *
 
 cdef str get_lower_case_name(str text):
@@ -15,7 +15,6 @@ cdef str get_lower_case_name(str text):
     return "".join(lst).lower()
 
 cdef class _DataModel:
-
 
     @classmethod
     def instanceBuilder(cls: DataModel, *args, **kwargs) -> ModelInstance:
@@ -62,7 +61,7 @@ cdef class ModelInstance(dict):
             if k in kwargs:
                 self[v.name] = kwargs[k]
             else:
-                self[v.name] = v.Default
+                self[v.name] = v.Default if not isinstance(v.Default, NullDefault) else None
 
     def __getattribute__(self, str name):
         item = object.__getattribute__(self, 'get')(name)
@@ -78,12 +77,16 @@ cdef class ModelInstance(dict):
         raise KeyError()
 
 
+cdef class InstanceList(list):
+    pass
+
+
 class DataModel(_DataModel, metaclass=_DataModelMeta):
     col: tuple
     mapping: dict
     _tableName: str
     _db: Type[DB] = DB
 
-
     def __new__(cls, *args, **kwargs) -> ModelInstance:
         return cls.instanceBuilder(cls, *args, **kwargs)
+

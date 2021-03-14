@@ -13,20 +13,25 @@ cdef class BaseProperty:
     cpdef public bint verifier(self, object value)
     cdef public toDBValue(self, value)
     cdef public toObjValue(self, value)
+    cdef FilterListCell setFilter(self, object other, Relationship relationship)
 
 cdef enum Relationship:
     AND
     OR
     EQUAL
     BIGGER
+    BIGGER_EQUAL
     SMALLER
+    SMALLER_EQUAL
     NOTEQUAL
     NONE
 
-
 cdef class FilterListCell:
-    cdef char * value
-    cdef Relationship relationship
-    cdef FilterListCell next
+    cdef public str value
+    cdef public Relationship relationship
+    cdef public FilterListCell next
+    cdef public BaseProperty col
 
-    cdef FilterListCell append(self, FilterListCell cell)
+    cpdef FilterListCell append(self, FilterListCell cell, Relationship relationship)
+    cpdef _add(self, object other, Relationship relationship)
+

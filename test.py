@@ -1,11 +1,18 @@
 from Model.DataModel import DataModel
 from Model.ModelProperty import *
+from DB.Generator import SqlGenerator
 
 
 class TestModel(DataModel):
     name = StrProperty(default='这是名字')
+    phone = StrProperty()
 
 
 if __name__ == '__main__':
-    a = TestModel(**{'name': '傻逼'})
-    print(a.tableName)
+    g: SqlGenerator = SqlGenerator()
+    print(g.select(TestModel.name).From(TestModel).where((TestModel.name < '3') & "3" & (TestModel.phone == "123")).Build())
+
+
+
+
+

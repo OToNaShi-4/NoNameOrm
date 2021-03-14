@@ -9,17 +9,42 @@ cdef class NullDefault:
 cdef NullDefault _null = NullDefault()
 
 cdef class FilterListCell:
-    def __init__(self, char *cell = '', Relationship relationship = Relationship.NONE):
-        if <str>cell == '':
+    def __init__(self, str cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
+        if <str> cell == '':
             raise
         self.value = cell
         self.relationship = relationship
         self.next = None
+        self.col = col
 
-    cdef FilterListCell append(self, FilterListCell cell):
+    cpdef FilterListCell append(self, FilterListCell cell, Relationship relationship):
         if self.next:
-            return self.next.append(cell)
+            return self.next.append(cell, relationship)
+        if self.col and not cell.col:
+            cell.value = self.col.toDBValue(cell.value)
         self.next = cell
+        self.relationship = relationship
+        return self
+
+    def check(self):
+        print(self.value)
+        if self.next:
+            self.next.check()
+
+    def __and__(self, other):
+        return self._add(other, AND)
+
+    def __or__(self, other):
+        return self._add(other, OR)
+
+    cpdef _add(self, object other, Relationship relationship):
+        if issubclass(other.__class__, BaseProperty):
+            self.append(FilterListCell(other.name, col=other), relationship)
+        elif issubclass(other.__class__, FilterListCell):
+            self.append(other, relationship)
+        else:
+            self.append(FilterListCell(other), relationship)
+        return self
 
 cdef class BaseProperty:
     def __init__(self,
@@ -63,13 +88,39 @@ cdef class BaseProperty:
     cdef public toObjValue(self, value):
         return value
 
+    def __eq__(self, other) -> FilterListCell:
+        return self.setFilter(other, EQUAL)
+
+    def __ne__(self, other) -> FilterListCell:
+        return self.setFilter(other, NOTEQUAL)
+
+    def __lt__(self, other) -> FilterListCell:
+        return self.setFilter(other, SMALLER)
+
+    def __gt__(self, other) -> FilterListCell:
+        return self.setFilter(other, BIGGER)
+
+    def __le__(self, other) -> FilterListCell:
+        return self.setFilter(other,SMALLER_EQUAL)
+
+    def __ge__(self, other) -> FilterListCell:
+        return self.setFilter(other, BIGGER_EQUAL)
+
+    cdef FilterListCell setFilter(self, object other, Relationship relationship):
+        f = FilterListCell(self.name, col=self)
+        if issubclass(BaseProperty, other.__class__):
+            f.append(FilterListCell(other.name, col=other), relationship)
+        else:
+            f.append(FilterListCell(self.toDBValue(other)), relationship)
+        return f
+
     @property
     def hasDefault(self):
-        return not self.default == _null
+        return not self._default == _null
 
     @property
     def Default(self):
-        return self.default
+        return self._default
 
     @property
     def dbName(self) -> str:
