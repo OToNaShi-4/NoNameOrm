@@ -14,3 +14,7 @@ class PropertyVerifyError(BaseOrmError):
 class FloatPropertyOutOfRangeError(BaseOrmError):
     def _process(self, size: tuple, value: float, *args, **kwargs):
         self.msg = f'浮点数据整数位限制为{size[0]}位，小数位为{size[1]}位，传入数据{value}超出限制'
+
+
+class PrimaryKeyOverLimitError(BaseOrmError):
+    msg = '每个MODEL对象只允许拥有一个主键约束'

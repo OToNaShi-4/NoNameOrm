@@ -1,5 +1,7 @@
+from Model.ModelProperty cimport BaseProperty
+
 cdef class _DataModel:
     cdef tuple col
     cdef dict mapping
     cdef modelInstance
-    cdef public str pkName, tableName
+    cdef public str tableName

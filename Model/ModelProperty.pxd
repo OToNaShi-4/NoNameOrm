@@ -1,11 +1,14 @@
 from enum import Enum
 
+
+cdef class NullDefault:
+    pass
+
 cdef class BaseProperty:
     cdef public str name
     cdef type _Type
     cdef public bint isPk
     cdef public bint Null
-
     cdef public object _default
     cdef object targetType
 

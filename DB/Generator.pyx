@@ -5,13 +5,13 @@ from Error.SqlError import *
 from Model.ModelProperty cimport BaseProperty, FilterListCell, Relationship
 
 cdef dict relationshipMap = {
-    Relationship.AND     : " AND ",
-    Relationship.OR      : " OR ",
-    Relationship.EQUAL   : " = ",
-    Relationship.BIGGER  : " > ",
-    Relationship.SMALLER : " < ",
-    Relationship.NOTEQUAL: " != ",
-    Relationship.BIGGER_EQUAL: " >= ",
+    Relationship.AND          : " AND ",
+    Relationship.OR           : " OR ",
+    Relationship.EQUAL        : " = ",
+    Relationship.BIGGER       : " > ",
+    Relationship.SMALLER      : " < ",
+    Relationship.NOTEQUAL     : " != ",
+    Relationship.BIGGER_EQUAL : " >= ",
     Relationship.SMALLER_EQUAL: " <= ",
 }
 
@@ -19,7 +19,7 @@ cdef class SqlGenerator:
     def __init__(self):
         self.selectCol = []
         self.currentType = sqlType.NONE
-        self.limit =''
+        self.limit = ''
 
     def select(self, *args) -> SqlGenerator:
         if not self.currentType == sqlType.NONE:

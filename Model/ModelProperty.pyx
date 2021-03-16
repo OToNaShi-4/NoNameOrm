@@ -1,6 +1,8 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
+from typing import Optional
+
 from Error.PropertyError import *
-import Model.DataModel
+
 from enum import Enum
 
 cdef class NullDefault:
@@ -66,9 +68,15 @@ cdef class BaseProperty:
         pass
 
     def __set_name__(self, owner, name: str) -> None:
+        import Model.DataModel
         if not issubclass(owner, Model.DataModel.DataModel):
             raise PropertyUsageError(owner)
         self.name = name
+        if self.isPk:
+            if owner.pkName and owner.pkCol:
+                raise PrimaryKeyOverLimitError()
+            owner.pkCol = self
+            owner.pkName = self.name
 
     cpdef public bint sizeChecker(self, object value):
         return True
@@ -101,7 +109,7 @@ cdef class BaseProperty:
         return self.setFilter(other, BIGGER)
 
     def __le__(self, other) -> FilterListCell:
-        return self.setFilter(other,SMALLER_EQUAL)
+        return self.setFilter(other, SMALLER_EQUAL)
 
     def __ge__(self, other) -> FilterListCell:
         return self.setFilter(other, BIGGER_EQUAL)
@@ -197,3 +205,34 @@ class BoolProperty(BaseProperty):
                 return False
         elif self.targetType == boolSupportType.bit:
             return value == b'\x01'
+
+
+class ForeignType(Enum):
+    ONE_TO_ONE = 1
+    ONE_TO_MANY = 2
+    MANY_TO_MANY = 3
+
+
+class ForeignKey(dict):
+    __slots__ = ()
+    import Model.DataModel
+    target: Model.DataModel.DataModel
+    bindCol: BaseProperty
+    Type: ForeignType
+
+    def __init__(self,
+                 target,
+                 Type: ForeignType = ForeignType.ONE_TO_ONE,
+                 bindCol: Optional[BaseProperty] = None
+                 ):
+        super().__init__()
+        self['target'] = target
+        self['bindCol'] = bindCol
+        self['Type'] = Type
+
+    def __set_name__(self, owner, name):
+        if not self.bindCol:
+            pass
+
+    def __getattribute__(self, str item):
+        return object.__getattribute__(self, 'get')(item, None)
