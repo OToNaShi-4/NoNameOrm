@@ -1,9 +1,12 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
+# cython_ext: language_level=3
 from typing import Optional
 
 from Error.PropertyError import *
 
 from enum import Enum
+
+import Model.DataModel
 
 cdef class NullDefault:
     pass
@@ -11,7 +14,7 @@ cdef class NullDefault:
 cdef NullDefault _null = NullDefault()
 
 cdef class FilterListCell:
-    def __init__(self, str cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
+    def __init__(self, cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
         if <str> cell == '':
             raise
         self.value = cell
@@ -72,6 +75,7 @@ cdef class BaseProperty:
         if not issubclass(owner, Model.DataModel.DataModel):
             raise PropertyUsageError(owner)
         self.name = name
+        self.model = owner
         if self.isPk:
             if owner.pkName and owner.pkCol:
                 raise PrimaryKeyOverLimitError()
@@ -219,20 +223,29 @@ class ForeignKey(dict):
     target: Model.DataModel.DataModel
     bindCol: BaseProperty
     Type: ForeignType
+    owner: Model.DataModel.DataModel
+    targetBindCol: Optional[BaseProperty]
 
     def __init__(self,
                  target,
                  Type: ForeignType = ForeignType.ONE_TO_ONE,
-                 bindCol: Optional[BaseProperty] = None
+                 bindCol: Optional[BaseProperty] = None,
+                 targetBindCol: Optional[BaseProperty] = None
                  ):
         super().__init__()
         self['target'] = target
         self['bindCol'] = bindCol
         self['Type'] = Type
+        self['targetBindCol'] = targetBindCol
 
     def __set_name__(self, owner, name):
+        if not issubclass(owner, Model.DataModel.DataModel):
+            raise ForeignKeyDependError()
+        self['owner'] = owner
         if not self.bindCol:
-            pass
+            self['bindCol'] = owner.pkCol
+        if not self.targetBindCol:
+            self['targetBindCol'] = self.target.pkCol
 
     def __getattribute__(self, str item):
         return object.__getattribute__(self, 'get')(item, None)

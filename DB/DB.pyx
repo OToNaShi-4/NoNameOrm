@@ -1,17 +1,17 @@
 from Error.DBError import *
-
+from DB.Connector cimport BaseConnector
 
 cdef class DB:
-    cdef DB _instance
 
-    def __cinit__(self):
-        pass
+    def __init__(self, BaseConnector connector, *args, **kwargs):
+        if not kwargs.get('cr'):
+            raise DBInstanceCreateError()
 
     @classmethod
     def create(cls, *args, **kwargs) -> DB:
         if cls._instance:
             raise DBInstanceError()
-        cls._instance = DB()
+        cls._instance = DB(cls, cr=True * args, **kwargs)
         return cls._instance
 
     @classmethod
@@ -24,3 +24,6 @@ cdef class DB:
             raise
         return cls._instance
 
+def use_database(fun):
+    def warp(self, *args, **kwargs):
+        pass

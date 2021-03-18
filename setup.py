@@ -13,7 +13,6 @@ for i, j, k in os.walk('./'):
             ex.append(Extension('*', [(i if i.endswith('/') else i+'/') + file]))
 
 setup(
-    ext_modules=cythonize(ex),
-    language_level=3,
+    ext_modules=cythonize(ex,compiler_directives={'language_level' : "3"},),
     zip_safe=False,
 )

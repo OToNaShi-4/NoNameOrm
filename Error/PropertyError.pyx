@@ -1,3 +1,4 @@
+# cython: language_level=3
 from .BaseOrmError import BaseOrmError
 
 
@@ -18,3 +19,6 @@ class FloatPropertyOutOfRangeError(BaseOrmError):
 
 class PrimaryKeyOverLimitError(BaseOrmError):
     msg = '每个MODEL对象只允许拥有一个主键约束'
+
+class ForeignKeyDependError(BaseOrmError):
+    msg = "外键实例依赖于DataModel子类，无法在非DataModel中创建"

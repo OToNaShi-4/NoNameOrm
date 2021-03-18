@@ -1,4 +1,5 @@
-from enum import Enum
+# cython_ext: language_level=3
+
 
 
 cdef class NullDefault:
@@ -11,6 +12,7 @@ cdef class BaseProperty:
     cdef public bint Null
     cdef public object _default
     cdef object targetType
+    cdef object model
 
     cpdef public bint sizeChecker(self, object value)
     cpdef public bint verifier(self, object value)
@@ -30,7 +32,7 @@ cdef enum Relationship:
     NONE
 
 cdef class FilterListCell:
-    cdef public str value
+    cdef public object value
     cdef public Relationship relationship
     cdef public FilterListCell next
     cdef public BaseProperty col
