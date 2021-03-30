@@ -1,5 +1,5 @@
-from DB.Generator cimport SqlGenerator
-from Model.ModelProperty cimport BaseProperty
+
+
 
 cdef class _DataModel:
     cdef tuple col
@@ -7,9 +7,9 @@ cdef class _DataModel:
     cdef modelInstance
     cdef public str tableName
 
+cdef class InstanceList(list):
+    pass
 
-cdef class ModelExecutor:
-
-    cdef:
-        object model
-        SqlGenerator sql
+cdef class ModelInstance(dict):
+    cdef dict _temp
+    pass

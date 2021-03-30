@@ -3,19 +3,18 @@ import json
 from Model.DataModel import DataModel, AsyncModelExecutor
 from Model.ModelProperty import *
 from DB.Generator import SqlGenerator
+from DB.DB import DB
+from DB.Connector import AioMysqlConnector
+import asyncio
 
-
-class ForeignModel(DataModel):
+class user(DataModel):
     id = IntProperty(pk=True)
-    fname = StrProperty()
+    nickname = StrProperty()
+    username = StrProperty()
+    avatar = StrProperty()
 
 
-class TestModel(DataModel):
-    id = IntProperty(pk=True)
-    name = StrProperty(default='这是名字')
-    phone = StrProperty()
-    foreign = ForeignKey(ForeignModel)
-
+loop = asyncio.get_event_loop()
 
 if __name__ == '__main__':
     # g: SqlGenerator = SqlGenerator()
@@ -25,6 +24,15 @@ if __name__ == '__main__':
     # print(sql)
     # print(json.dumps(TestModel()))
     # print(TestModel.__dict__)
-    a = TestModel(id=1)
-    exc: AsyncModelExecutor = TestModel.getAsyncExecutor()
-    exc.getAnyMatch(a)
+    DB.create(connector=AioMysqlConnector(**{
+        'host'    : '127.0.0.1',
+        'port'    : 3306,
+        'db'      : 'cy_live_dev',
+        'user'    : 'root',
+        # 'password': '12345678'
+        'password': '88888888'
+    }))
+    exc: AsyncModelExecutor = user.getAsyncExecutor()
+    mapper = user(id=25)
+    res = loop.run_until_complete(exc.getAnyMatch(mapper))
+    print(res.nickname)

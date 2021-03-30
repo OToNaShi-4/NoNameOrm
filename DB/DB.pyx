@@ -1,29 +1,52 @@
+from typing import Coroutine
+
+from DB.Generator import SqlGenerator
 from Error.DBError import *
-from DB.Connector cimport BaseConnector
+from DB.Connector cimport BaseConnector, ConnectorType
+
+cdef public DB instance = None
 
 cdef class DB:
-
-    def __init__(self, BaseConnector connector, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         if not kwargs.get('cr'):
             raise DBInstanceCreateError()
+        self.connector = kwargs.get('connector')
 
     @classmethod
     def create(cls, *args, **kwargs) -> DB:
-        if cls._instance:
+        if isinstance(cls.getInstance(), DB):
             raise DBInstanceError()
-        cls._instance = DB(cls, cr=True * args, **kwargs)
-        return cls._instance
+        kwargs['cr'] = True
+        global instance
+        instance = DB(cls, * args, **kwargs)
+        return instance
+
+    @property
+    def execute(self)->Coroutine:
+        if self.connector.isAsync:
+            return self.connector.asyncProcess
+        else:
+            return self.connector.process
+
+    @property
+    def instance(self):
+        return instance
+
+    @property
+    def ConnectorType(self):
+        return self.connector.Type
 
     @classmethod
     def getInstance(cls) -> DB:
-        return cls._instance
+        return instance
 
     @classmethod
     def getInstanceWithCheck(cls) -> DB:
-        if not cls._instance:
+        if not instance:
             raise
-        return cls._instance
+        return instance
 
 def use_database(fun):
     def warp(self, *args, **kwargs):
         pass
+    return warp

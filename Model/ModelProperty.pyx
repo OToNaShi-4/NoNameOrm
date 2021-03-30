@@ -1,5 +1,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 # cython_ext: language_level=3
+import json
 from typing import Optional
 
 from Error.PropertyError import *
@@ -32,7 +33,6 @@ cdef class FilterListCell:
         return self
 
     def check(self):
-        print(self.value)
         if self.next:
             self.next.check()
 
@@ -210,6 +210,30 @@ class BoolProperty(BaseProperty):
         elif self.targetType == boolSupportType.bit:
             return value == b'\x01'
 
+
+class jsonProperty(Enum):
+    varchar = 'varchar'
+    text = 'text'
+    longtext = 'longtext'
+    tinytext = 'tinytext'
+
+
+class JsonProperty(BaseProperty):
+    Type = dict
+    SupportType: jsonProperty = jsonProperty
+
+    def _init(self, targetType: jsonProperty = jsonProperty.text, *args, **kwargs):
+        self.targetType = targetType
+
+    def toObjValue(self, object value) -> dict or list:
+        if isinstance(value,dict) or isinstance(value,list):
+            return value
+        return json.loads(value)
+
+    def toDBValue(self, value) -> str:
+        if isinstance(value,str) or isinstance(value,bytes):
+            return value
+        return json.dumps(value)
 
 class ForeignType(Enum):
     ONE_TO_ONE = 1

@@ -2,6 +2,7 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 from typing import List
 
+from Model.DataModel import DataModel
 from Model.DataModel cimport _DataModel
 from Error.SqlError import *
 from Model.ModelProperty cimport BaseProperty, FilterListCell, Relationship
@@ -37,7 +38,13 @@ cdef class SqlGenerator:
         self.limit = ''
         self.joinList = []
 
-    def select(self, *args:List[BaseProperty]) -> SqlGenerator:
+    def insert(self, model: DataModel):
+        if not self.currentType == NONE:
+            raise SqlInStanceError(self.currentType, sqlType.INSERT)
+        self.target = model
+        return self
+
+    def select(self, *args: List[BaseProperty]) -> SqlGenerator:
         if not self.currentType == NONE:
             raise SqlInStanceError(self.currentType, sqlType.SELECT)
         self.currentType = sqlType.SELECT
@@ -95,11 +102,11 @@ cdef class SqlGenerator:
             str whereTemp
             list whereParams
         for cur in self.updateCol:
-            updateTemp += cur['name'] + " = ?,"
-            params.append(cur['value'])
+            updateTemp += cur['name'] + " = %s,"
+            params.append(str(cur['value']))
 
         whereTemp, whereParams = self.build_where()
-        return updateTemp[:-1] + whereTemp, params + (<list> whereParams)+";"
+        return updateTemp[:-1] + whereTemp, params + (<list> whereParams) + ";"
 
     cdef tuple build_select(self):
         cdef:
@@ -151,5 +158,5 @@ cdef class SqlGenerator:
         if cur.col:
             return cur.col.model.tableName + "." + cur.value + " " + relationshipMap.get(cur.relationship, '')
         else:
-            params.append(cur.value)
-            return " ? " + relationshipMap.get(cur.relationship, '')
+            params.append(str(cur.value))
+            return " %s " + relationshipMap.get(cur.relationship, '')

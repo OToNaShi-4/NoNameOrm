@@ -1,4 +1,6 @@
 from typing import Optional, Type, List
+
+from Model.ModelExcutor import AsyncModelExecutor
 from .ModelProperty cimport *
 from DB.DB import *
 
@@ -49,19 +51,29 @@ class _DataModelMeta(type):
 
 
 cdef class ModelInstance(dict):
-    object: Optional[DataModel]
-    cdef dict _temp
-
     def __init__(self, *args, **kwargs):
-        super().__init__()
-
         cdef:
             str k
             BaseProperty v
-            cdef dict data = args[0] if len(args) == 1 and isinstance(args[0], dict) else kwargs
+            cdef dict data = kwargs
+
+
+        if len(args):
+            if isinstance(args[0], zip):
+                super().__init__(args[0])
+            elif isinstance(args[0], dict):
+                data = args[0]
+                super().__init__()
+            else:
+                super().__init__()
+        else:
+            super().__init__()
+
         for k, v in object.__getattribute__(self, 'object').mapping.items():
             if k in data:
                 self[v.name] = data[k]
+            elif k in self:
+                continue
             else:
                 self[v.name] = v.Default if not isinstance(v.Default, NullDefault) else None
 
@@ -81,54 +93,14 @@ cdef class ModelInstance(dict):
 cdef class InstanceList(list):
     pass
 
-cdef class ModelExecutor:
-    pass
-
-cdef class AsyncModelExecutor(ModelExecutor):
-    def __init__(self, model: DataModel, work=None):
-        self.model = model
-        self.sql = SqlGenerator()
-
-    def getAnyMatch(self, instance: ModelInstance):
-        self.sql.select(*self.model.col) \
-            .From(self.model)
-
-        self.sql.where(self.instanceToFilter(instance))
-        print(self.sql.Build())
-
-    cdef FilterListCell instanceToFilter(self, ModelInstance instance):
-        cdef:
-            int i
-            BaseProperty cur
-            FilterListCell f_list = FilterListCell('true')
-        for i in range(len(self.model.col) - 1):
-            cur = (<list> self.model.col)[i]
-            if not instance.get(cur.name):
-                continue
-            f_list.append(FilterListCell(cur.name, col=cur), Relationship.AND) \
-                .append(FilterListCell(instance.get(cur.name)), Relationship.EQUAL)
-        return f_list
-
-    async def find(self, *cols: List[BaseProperty]):
-        pass
-
-    async def save(self, instance: ModelInstance):
-        pass
-
-    async def update(self, instance: ModelInstance):
-        pass
-
 
 class DataModel(_DataModel, metaclass=_DataModelMeta):
-    col: tuple
-    mapping: dict
-    tableName: str
     _db: Type[DB] = DB
     pkName: Optional[str] = None
     pkCol: Optional[BaseProperty] = None
 
     def __new__(cls, *args, **kwargs) -> ModelInstance:
-        return cls.instanceBuilder(cls, *args, **kwargs)
+        return cls.instanceBuilder(*args, **kwargs)
 
     @classmethod
     def getAsyncExecutor(cls, work=None) -> AsyncModelExecutor:
