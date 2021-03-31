@@ -12,10 +12,12 @@ cdef class BaseModelExecutor:
         SqlGenerator sql
         object work
         DB db
+        dict __dict__
 
     cdef FilterListCell instanceToFilter(self, ModelInstance instance)
     cdef process(self, object res)
     cdef object processSelect(self, tuple res)
+    cdef processInsert(self, int res)
 
 
 cdef class AsyncModelExecutor(BaseModelExecutor):

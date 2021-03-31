@@ -7,11 +7,12 @@ from DB.DB import DB
 from DB.Connector import AioMysqlConnector
 import asyncio
 
-class user(DataModel):
+
+class Gift(DataModel):
     id = IntProperty(pk=True)
-    nickname = StrProperty()
-    username = StrProperty()
-    avatar = StrProperty()
+    name = StrProperty()
+    icon = StrProperty()
+    price = FloatProperty()
 
 
 loop = asyncio.get_event_loop()
@@ -32,7 +33,7 @@ if __name__ == '__main__':
         # 'password': '12345678'
         'password': '88888888'
     }))
-    exc: AsyncModelExecutor = user.getAsyncExecutor()
-    mapper = user(id=25)
-    res = loop.run_until_complete(exc.getAnyMatch(mapper))
-    print(res.nickname)
+    mapper = Gift(id=14, name='123123', price=2.23)
+
+    res = loop.run_until_complete(Gift.getAsyncExecutor().delete(mapper))
+    print(res)

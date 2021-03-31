@@ -6,4 +6,4 @@ class BaseOrmError(BaseException):
         super().__init__(self.msg, *args, **kwargs)
 
     def _process(self, *args, **kwargs) -> None:
-        self.msg = '这是个默认错误，没有任何意义'
+        pass

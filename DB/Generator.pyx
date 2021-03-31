@@ -2,7 +2,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 from typing import List
 
-from Model.DataModel import DataModel
 from Model.DataModel cimport _DataModel
 from Error.SqlError import *
 from Model.ModelProperty cimport BaseProperty, FilterListCell, Relationship
@@ -33,15 +32,19 @@ cdef class JoinCell:
 
 cdef class SqlGenerator:
     def __init__(self):
-        self.selectCol = []
         self.currentType = NONE
         self.limit = ''
-        self.joinList = []
+        self.target = None
 
-    def insert(self, model: DataModel):
+    def insert(self, model):
         if not self.currentType == NONE:
             raise SqlInStanceError(self.currentType, sqlType.INSERT)
-        self.target = model
+        self.currentType = sqlType.INSERT
+        self.From(model)
+        return self
+
+    def values(self, *args):
+        self.selectCol = list(args)
         return self
 
     def select(self, *args: List[BaseProperty]) -> SqlGenerator:
@@ -51,18 +54,31 @@ cdef class SqlGenerator:
         self.selectCol = list(args)
         return self
 
-    cdef public SqlGenerator update(self, _DataModel target):
+    def delete(self, target):
+        if not self.currentType == NONE:
+            raise SqlInStanceError(self.currentType, sqlType.DELETE)
+        self.From(target)
+        self.currentType = sqlType.DELETE
+        return self
+
+    cdef public SqlGenerator update(self, object target):
         self.currentType = sqlType.UPDATE
-        self.target = target
+        self.From(target)
         return self
 
     def set(self, *args)-> SqlGenerator:
         if self.currentType == sqlType.NONE:
             raise SetSQLError()
-        self.updateCol = args
+        self.updateCol = list(args)
+        return self
 
     cpdef public SqlGenerator From(self, object target):
-        self.target = target.tableName
+        if isinstance(target, str):
+            self.target = target
+        else:
+            from Model.DataModel import DataModel
+            assert isinstance(target, type) and issubclass(target, DataModel), 'Form仅支持字符串或者DataModel子类'
+            self.target = target.tableName
         return self
 
     def where(self, FilterListCell args=None) -> SqlGenerator:
@@ -76,6 +92,10 @@ cdef class SqlGenerator:
             return self.build_select()
         elif self.currentType == sqlType.UPDATE:
             return self.build_update()
+        elif self.currentType == sqlType.INSERT:
+            return self.build_insert()
+        elif self.currentType == sqlType.DELETE:
+            return self.build_delete()
 
     def Limit(self, int count, int offset) -> SqlGenerator:
         self.limit = "limit %i %i" % (count, offset)
@@ -94,6 +114,33 @@ cdef class SqlGenerator:
     def innerJoin(self, object foreignKey) -> SqlGenerator:
         return self.join(foreignKey, JoinType.INNER_JOIN)
 
+    cdef tuple build_delete(self):
+        cdef:
+            str whereTemp
+            list params
+
+        whereTemp, params = self.build_where()
+
+        return "DELETE FROM " + self.target + " " + whereTemp, params
+
+    cdef tuple build_insert(self):
+        cdef:
+            str insertTemp = "INSERT INTO " + self.target + " "  # INSERT 语句
+            dict cur  # 数据指针
+            list params = []  # sql参数
+            list cols = []
+            int i
+
+        # 将插入数据压入列表
+        for cur in self.selectCol:
+            cols.append((<BaseProperty> cur.get('col')).name)
+            params.append(str(cur.get('value')))
+
+        # 拼接完整sql语句
+        insertTemp += "(" + ",".join(cols) + ") values (" + ",".join(['%s' for i in range(len(params))]) + ');'
+
+        return insertTemp, params
+
     cdef tuple build_update(self):
         cdef:
             str updateTemp = "UPDATE " + self.target + " SET "
@@ -101,12 +148,13 @@ cdef class SqlGenerator:
             list params = []
             str whereTemp
             list whereParams
+
         for cur in self.updateCol:
             updateTemp += cur['name'] + " = %s,"
             params.append(str(cur['value']))
 
         whereTemp, whereParams = self.build_where()
-        return updateTemp[:-1] + whereTemp, params + (<list> whereParams) + ";"
+        return updateTemp[:-1] + whereTemp + ";", params + whereParams
 
     cdef tuple build_select(self):
         cdef:

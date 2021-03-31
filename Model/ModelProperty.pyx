@@ -94,6 +94,18 @@ cdef class BaseProperty:
         except Exception:
             raise PropertyVerifyError(value, self._Type)
 
+    def insertCell(self, value):
+        return {
+            'col':self,
+            'value': self.toDBValue(value)
+        }
+
+    def updateCell(self,value):
+        return {
+            'name':self.name,
+            'value': self.toDBValue(value)
+        }
+
     cdef public toDBValue(self, value):
         return value if value else 'null'
 
@@ -225,7 +237,7 @@ class JsonProperty(BaseProperty):
     def _init(self, targetType: jsonProperty = jsonProperty.text, *args, **kwargs):
         self.targetType = targetType
 
-    def toObjValue(self, object value) -> dict or list:
+    def toObjValue(self, object value):
         if isinstance(value,dict) or isinstance(value,list):
             return value
         return json.loads(value)

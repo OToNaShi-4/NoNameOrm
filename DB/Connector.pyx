@@ -37,8 +37,8 @@ cdef class AioMysqlConnector(BaseConnector):
         cdef SqlGenerator sql = executor.sql
 
         # 判断非查询行为是否处于事务模式下
-        if sql.currentType != sqlType.SELECT and 'con' not in kwargs:
-            raise WriteOperateNotInAffairs()
+        # if sql.currentType != sqlType.SELECT and 'con' not in kwargs:
+        #     raise WriteOperateNotInAffairs()
 
         # 获取数据库链接
         cdef object res
@@ -49,7 +49,7 @@ cdef class AioMysqlConnector(BaseConnector):
             if sql.currentType != sqlType.INSERT:
                 res = await cur.fetchall()
             else:
-                res = await cur.lastrowid
+                res = cur.lastrowid
 
         # 处理查询结果
         return executor.process(res)
