@@ -34,6 +34,5 @@ if __name__ == '__main__':
         'password': '88888888'
     }))
     mapper = Gift(id=14, name='123123', price=2.23)
-
     res = loop.run_until_complete(Gift.getAsyncExecutor().delete(mapper))
     print(res)
