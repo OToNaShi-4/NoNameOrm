@@ -261,6 +261,7 @@ class ForeignKey(dict):
     Type: ForeignType
     owner: Model.DataModel.DataModel
     targetBindCol: Optional[BaseProperty]
+    name: str
 
     def __init__(self,
                  target,
@@ -275,6 +276,7 @@ class ForeignKey(dict):
         self['targetBindCol'] = targetBindCol
 
     def __set_name__(self, owner, name):
+        self.name = name
         if not issubclass(owner, Model.DataModel.DataModel):
             raise ForeignKeyDependError()
         self['owner'] = owner

@@ -1,8 +1,8 @@
-from typing import Type, Optional
+from typing import Type, Optional, List
 
 from DB.DB import DB
 from Model.ModelExcutor import AsyncModelExecutor
-from Model.ModelProperty import BaseProperty
+from Model.ModelProperty import BaseProperty, ForeignKey
 
 
 class ModelInstance(dict):
@@ -27,6 +27,7 @@ class DataModel(_DataModel,ModelInstance, metaclass=_DataModelMeta):
     _db: Type[DB] = DB
     pkName: Optional[str] = None
     pkCol: Optional[BaseProperty] = None
+    fk: List[ForeignKey]
 
     def __new__(cls, *args, **kwargs) -> ModelInstance:...
 

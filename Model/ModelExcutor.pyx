@@ -6,6 +6,7 @@ from DB.Generator cimport SqlGenerator, sqlType
 from Error.DBError import UpdateWithOutPrimaryKeyError, DeleteWithOutPrimaryKeyError
 
 from Model.DataModel cimport ModelInstance, InstanceList
+from Model.ModelProperty import ForeignKey, ForeignType
 from .ModelProperty cimport *
 from DB.DB cimport DB
 
@@ -15,8 +16,6 @@ cdef class BaseModelExecutor:
         self.model = model
         self.work = work
         self.sql = SqlGenerator().From(model)
-
-    def __cinit__(self):
         self.__dict__ = {}
 
     cdef FilterListCell instanceToFilter(self, ModelInstance instance):
@@ -96,6 +95,11 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         self.sql.select(*cols)
         return self
 
+    async def findForeignKey(self, instance):
+        for fk in self.model.fk:
+            instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(fk.targetBindCol == instance[fk.bindCol.name])
+        return instance
+
     async def By(self, FilterListCell Filter = None):
         self.sql.where(Filter)
         return self.execute()
@@ -114,15 +118,25 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             # 插入数据列表
             insertData.append(cur.insertCell(instance[cur.name]))
 
-        # todo: 待完成外键表添加
-
         if not insertData:
             pass
 
         self.sql.insert(self.model).values(*insertData)
-        return await self.execute()
+        res = await self.execute()
 
-    async def delete(self,instance):
+        # 外键插入
+        for fk in self.model.fk:
+            if fk.name not in instance:
+                continue
+            if fk.Type == ForeignType.ONE_TO_ONE:
+                res[fk.name] = await fk.target.getAsyncExecutor(self.work).save(instance[fk.name])
+                continue
+            res[fk.name] = []
+            for i in instance[fk.name]:
+                res[fk.name].append(await fk.target.getAsyncExecutor(self.work).save(instance[fk.name]))
+        return res
+
+    async def delete(self, instance):
         if not instance[self.model.pkName]:
             raise DeleteWithOutPrimaryKeyError()
 
@@ -140,6 +154,16 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             list params = [cur.updateCell(instance[cur.name]) for cur in self.model.col]
 
         self.sql.update(self.model).set(*params).where(self.model.pkCol == instance[self.model.pkName])
+
+        for fk in self.model.fk:
+            fk: ForeignKey
+            if fk.name in instance:
+                if fk.Type == ForeignType.ONE_TO_ONE:
+                    await fk.owner.getAsyncExecutor(self.work).update(instance[fk.name])
+                    continue
+                for i in instance[fk.name]:
+                    await fk.owner.getAsyncExecutor(self.work).update(i)
+
         return await self.execute()
 
     async def execute(self):
