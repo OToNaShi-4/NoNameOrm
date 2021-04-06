@@ -28,6 +28,9 @@ cdef class AioMysqlConnector(BaseConnector):
         self.selectCon = await pool.acquire()
         return pool
 
+    async def getCon(self):
+        return await self._pool.acquire()
+
     async def asyncProcess(self, *args, **kwargs):
         # 获取异步执行对象
         cdef AsyncModelExecutor executor = kwargs.get('executor')
@@ -37,8 +40,8 @@ cdef class AioMysqlConnector(BaseConnector):
         cdef SqlGenerator sql = executor.sql
 
         # 判断非查询行为是否处于事务模式下
-        # if sql.currentType != sqlType.SELECT and 'con' not in kwargs:
-        #     raise WriteOperateNotInAffairs()
+        if sql.currentType != sqlType.SELECT and 'con' not in kwargs:
+            raise WriteOperateNotInAffairs()
 
         # 获取数据库链接
         cdef object res

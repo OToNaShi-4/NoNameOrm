@@ -17,6 +17,9 @@ class DB:
     def instance(self) -> DB: ...
 
     @property
+    def connector(self) -> BaseConnector:...
+
+    @property
     def ConnectorType(self): ...
 
     @classmethod

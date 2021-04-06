@@ -1,5 +1,6 @@
 import json
 
+from Ext.Decorators import use_database
 from Model.DataModel import DataModel, AsyncModelExecutor
 from Model.ModelProperty import *
 from DB.Generator import SqlGenerator
@@ -15,7 +16,20 @@ class Gift(DataModel):
     price = FloatProperty()
 
 
+class abc:
+
+    @use_database
+    async def test(self):
+        mapper = Gift(id=15, name='123123', price=2.23)
+        return await Gift.getAsyncExecutor(self).delete(mapper)
+
+
 loop = asyncio.get_event_loop()
+
+
+async def main():
+    return await abc().test()
+
 
 if __name__ == '__main__':
     # g: SqlGenerator = SqlGenerator()
@@ -33,6 +47,5 @@ if __name__ == '__main__':
         # 'password': '12345678'
         'password': '88888888'
     }))
-    mapper = Gift(id=14, name='123123', price=2.23)
-    res = loop.run_until_complete(Gift.getAsyncExecutor().delete(mapper))
-    print(res)
+    a = abc()
+    loop.run_until_complete(main())

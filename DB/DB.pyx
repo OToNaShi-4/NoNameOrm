@@ -10,7 +10,7 @@ cdef class DB:
     def __init__(self, *args, **kwargs):
         if not kwargs.get('cr'):
             raise DBInstanceCreateError()
-        self.connector = kwargs.get('connector')
+        self._connector = kwargs.get('connector')
 
     @classmethod
     def create(cls, *args, **kwargs) -> DB:
@@ -22,8 +22,12 @@ cdef class DB:
         return instance
 
     @property
+    def connector(self):
+        return self._connector
+
+    @property
     def execute(self)->Coroutine:
-        if self.connector.isAsync:
+        if self._connector.isAsync:
             return self.connector.asyncProcess
         else:
             return self.connector.process
@@ -46,7 +50,3 @@ cdef class DB:
             raise
         return instance
 
-def use_database(fun):
-    def warp(self, *args, **kwargs):
-        pass
-    return warp

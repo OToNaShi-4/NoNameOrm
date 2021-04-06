@@ -14,7 +14,10 @@ cdef class BaseModelExecutor:
     def __init__(self, model, work=None):
         self.db = DB.getInstance()
         self.model = model
-        self.work = work
+        if work and hasattr(work, 'con'):
+            self.work = work.con
+        else:
+            self.work = work
         self.sql = SqlGenerator().From(model)
         self.__dict__ = {}
 
@@ -168,6 +171,6 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
     async def execute(self):
         if self.work:
-            return await self.db.execute(executor=self, con=self.work.con)
+            return await self.db.execute(executor=self, con=self.work)
         else:
             return await self.db.execute(executor=self)
