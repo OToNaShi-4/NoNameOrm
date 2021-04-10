@@ -6,7 +6,6 @@ from DB.Generator cimport SqlGenerator, sqlType
 from Error.DBError import UpdateWithOutPrimaryKeyError, DeleteWithOutPrimaryKeyError
 
 from Model.DataModel cimport ModelInstance, InstanceList
-from Model.ModelProperty import ForeignKey, ForeignType
 from .ModelProperty cimport *
 from DB.DB cimport DB
 
@@ -69,7 +68,8 @@ cdef class BaseModelExecutor:
 
     cdef processInsert(self, int res):
         if 'instance' in self.__dict__:
-            self.__dict__['instance'][self.model.pkName] = res
+            if not self.__dict__['instance'][self.model.pkName] and res:
+                self.__dict__['instance'][self.model.pkName] = res
             return self.__dict__['instance']
         return self.model({self.model.pkName: res})
 
@@ -128,6 +128,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         res = await self.execute()
 
         # 外键插入
+        from Model.ModelProperty import ForeignType
         for fk in self.model.fk:
             if fk.name not in instance:
                 continue
@@ -157,9 +158,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             list params = [cur.updateCell(instance[cur.name]) for cur in self.model.col]
 
         self.sql.update(self.model).set(*params).where(self.model.pkCol == instance[self.model.pkName])
-
+        from Model.ModelProperty import ForeignType
         for fk in self.model.fk:
-            fk: ForeignKey
             if fk.name in instance:
                 if fk.Type == ForeignType.ONE_TO_ONE:
                     await fk.owner.getAsyncExecutor(self.work).update(instance[fk.name])

@@ -7,12 +7,14 @@ from Error.PropertyError import *
 
 from enum import Enum
 
-import Model.DataModel
-
 cdef class NullDefault:
     pass
 
+cdef class AutoIncrement:
+    pass
+
 cdef NullDefault _null = NullDefault()
+auto_increment = AutoIncrement()
 
 cdef class FilterListCell:
     def __init__(self, cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
@@ -57,11 +59,13 @@ cdef class BaseProperty:
                  bint pk = False,
                  default = _null,
                  bint Null = True,
+                 str define="",
                  *args, **kwargs):
 
         if name:
             self.name = name
         self._Type = self.Type
+        self.define = define
         self.isPk = pk
         self.Null = Null
         self._default = default
@@ -96,13 +100,13 @@ cdef class BaseProperty:
 
     def insertCell(self, value):
         return {
-            'col':self,
+            'col'  : self,
             'value': self.toDBValue(value)
         }
 
-    def updateCell(self,value):
+    def updateCell(self, value):
         return {
-            'name':self.name,
+            'name' : self.name,
             'value': self.toDBValue(value)
         }
 
@@ -144,7 +148,7 @@ cdef class BaseProperty:
 
     @property
     def Default(self):
-        return self._default
+        return None if isinstance(self._default, NullDefault) or isinstance(self._default, AutoIncrement) else self._default
 
     @property
     def dbName(self) -> str:
@@ -156,7 +160,7 @@ cdef class BaseProperty:
 
 
 class intSupportType(Enum):
-    int = 'int'
+    Int = 'int'
     bigint = 'int'
 
 
@@ -164,12 +168,12 @@ class IntProperty(BaseProperty):
     Type: type = int
     supportType: intSupportType = intSupportType
 
-    def _init(self, targetType: intSupportType = intSupportType.int, *args, **kwargs):
+    def _init(self, targetType: intSupportType = intSupportType.Int, *args, **kwargs):
         self.targetType = targetType
 
 
 class strSupportType(Enum):
-    varchar = 'varchar'
+    varchar = 'varchar(255)'
     text = 'text'
     longText = 'longtext'
     tinyText = 'tinytext'
@@ -201,7 +205,7 @@ class FloatProperty(BaseProperty):
 class boolSupportType(Enum):
     tinyInt = 'tinyint'
     bit = 'bit'
-    varchar = 'varchar'
+    varchar = 'varchar(1)'
 
 
 class BoolProperty(BaseProperty):
@@ -224,7 +228,7 @@ class BoolProperty(BaseProperty):
 
 
 class jsonProperty(Enum):
-    varchar = 'varchar'
+    varchar = 'varchar(255)'
     text = 'text'
     longtext = 'longtext'
     tinytext = 'tinytext'
@@ -238,14 +242,15 @@ class JsonProperty(BaseProperty):
         self.targetType = targetType
 
     def toObjValue(self, object value):
-        if isinstance(value,dict) or isinstance(value,list):
+        if isinstance(value, dict) or isinstance(value, list):
             return value
         return json.loads(value)
 
     def toDBValue(self, value) -> str:
-        if isinstance(value,str) or isinstance(value,bytes):
+        if isinstance(value, str) or isinstance(value, bytes):
             return value
         return json.dumps(value)
+
 
 class ForeignType(Enum):
     ONE_TO_ONE = 1
@@ -255,11 +260,8 @@ class ForeignType(Enum):
 
 class ForeignKey(dict):
     __slots__ = ()
-    import Model.DataModel
-    target: Model.DataModel.DataModel
     bindCol: BaseProperty
     Type: ForeignType
-    owner: Model.DataModel.DataModel
     targetBindCol: Optional[BaseProperty]
     name: str
 
@@ -277,6 +279,7 @@ class ForeignKey(dict):
 
     def __set_name__(self, owner, name):
         self.name = name
+        import Model.DataModel
         if not issubclass(owner, Model.DataModel.DataModel):
             raise ForeignKeyDependError()
         self['owner'] = owner

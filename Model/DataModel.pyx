@@ -1,7 +1,6 @@
 from typing import Optional, Type, List
-
-from Model.ModelExcutor import AsyncModelExecutor
 from Model.ModelProperty import ForeignKey
+from Model.ModelExcutor import AsyncModelExecutor
 from .ModelProperty cimport *
 from DB.DB import *
 
@@ -25,11 +24,14 @@ cdef class _DataModel:
 
 class _DataModelMeta(type):
 
+    ModelList:List['DataModel'] = []
+
     def __new__(cls, str name, bases: tuple, attrs: dict, **kwargs):
         attrs['col'], attrs['mapping'], attrs['fk'] = _DataModelMeta.getPropertyObj(cls, attrs)
         if not attrs.get('tableName'):
             attrs['tableName'] = get_lower_case_name(name)
         Class = type.__new__(cls, name, bases, attrs)
+        _DataModelMeta.ModelList.append(Class)
         setattr(Class, 'modelInstance', _DataModelMeta.buildModelInstance(Class, attrs['col'], name))
         return Class
 
@@ -45,6 +47,7 @@ class _DataModelMeta(type):
         cdef list fk = []
         cdef dict mapping = {}
         cdef str key
+
         for key, item in attrs.items():
             if isinstance(item, BaseProperty):
                 temp.append(item)
@@ -80,7 +83,7 @@ cdef class ModelInstance(dict):
             elif k in self:
                 continue
             else:
-                self[v.name] = v.Default if not isinstance(v.Default, NullDefault) else None
+                self[v.name] = v.Default
 
     def __getattribute__(self, str name):
         item = object.__getattribute__(self, 'get')(name)

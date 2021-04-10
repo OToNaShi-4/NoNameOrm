@@ -5,7 +5,6 @@ from typing import List
 from Model.DataModel cimport _DataModel
 from Error.SqlError import *
 from Model.ModelProperty cimport BaseProperty, FilterListCell, Relationship
-from Model.ModelProperty import ForeignKey
 
 cdef dict relationshipMap = {
     Relationship.AND          : " AND ",
@@ -26,11 +25,15 @@ cdef dict joinTypeMap = {
 }
 
 cdef class JoinCell:
-    def __init__(self, fk: ForeignKey, JoinType joinType = JoinType.JOIN):
+    def __init__(self, fk, JoinType joinType = JoinType.JOIN):
         self.Type = joinType
         self.key = fk
 
-cdef class SqlGenerator:
+cdef class BaseSqlGenerator:
+    cdef public tuple Build(self):
+        return ()
+
+cdef class SqlGenerator(BaseSqlGenerator):
     def __init__(self):
         self.currentType = NONE
         self.limit = ''
@@ -176,7 +179,7 @@ cdef class SqlGenerator:
             str joinTemp = "\n"
             JoinCell cell
         for cell in self.joinList:
-            foreignKey: ForeignKey = cell.key
+            foreignKey = cell.key
             joinTemp += "       " + joinTypeMap.get(cell.Type) + \
                         foreignKey.target.tableName + \
                         " on " + foreignKey.owner.tableName + "." + foreignKey.owner.pkName + " = " + \
@@ -208,3 +211,47 @@ cdef class SqlGenerator:
         else:
             params.append(str(cur.value))
             return " %s " + relationshipMap.get(cur.relationship, '')
+
+cdef class TableGenerator(BaseSqlGenerator):
+    def __init__(self, model):
+        self.model = model
+
+    cpdef public tuple Build(self):
+        cdef:
+            str sqlTemp = "CREATE TABLE " + self.model.tableName + "( \n"
+            BaseProperty col
+
+        # 生成列定义语句
+        for col in self.model.col:
+            sqlTemp += TableGenerator.build_col(col)
+
+        # 添加主键定义
+        if self.model.pkCol:
+            sqlTemp += "   constraint " + self.model.tableName + "_pk PRIMARY KEY (" + self.model.pkCol.name + ")\n"
+
+        # 收尾
+        sqlTemp += ") ENGINE=InnoDB DEFAULT CHARSET=UTF8MB4;"
+        print(sqlTemp)
+        return sqlTemp,
+
+    @staticmethod
+    cdef str build_col(BaseProperty col):
+        cdef str temp = "   " + col.name + " "
+
+        # 数据类型
+        temp += (col.targetType.value + " ")
+
+        # 是否非空
+        temp += "NULL " if col.Null and not col.isPk else "NOT NULL "
+
+        # 是否主键
+        if col.isPk:
+            from Model.ModelProperty import AutoIncrement
+            temp += "AUTO_INCREMENT " if isinstance(col.Default, AutoIncrement) else ""
+        else:
+            temp += ("DEFAULT " + col.toDBValue(col.Default)) if col.hasDefault else ""
+
+        # 额外定义
+        temp += col.define + ",\n"
+
+        return temp

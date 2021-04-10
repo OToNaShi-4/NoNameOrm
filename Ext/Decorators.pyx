@@ -13,4 +13,5 @@ def use_database(fun):
         else:
             await self.con.commit()
             return res
+        DB.getInstance().releaseCon(self.con)
     return warp

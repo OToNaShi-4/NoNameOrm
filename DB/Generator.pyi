@@ -8,7 +8,10 @@ class JoinCell:
     def __init__(self, fk: ForeignKey, joinType): ...
 
 
-class SqlGenerator:
+class BaseSqlGenerator:
+     def Build(self):...
+
+class SqlGenerator(BaseSqlGenerator):
     selectCol: List[BaseProperty]
     limit: str
     joinList: List[JoinCell]
@@ -41,3 +44,9 @@ class SqlGenerator:
     def rightJoin(self, foreignKey: DataModel) -> SqlGenerator: ...
 
     def innerJoin(self, foreignKey: DataModel) -> SqlGenerator: ...
+
+
+class TableGenerator(BaseSqlGenerator):
+    model:DataModel
+
+    def Build(self):...

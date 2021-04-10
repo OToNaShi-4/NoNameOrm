@@ -8,6 +8,7 @@ cdef class BaseConnector:
         ConnectorType Type
         bint isAsync
         object selectCon
+        public dict _config
 
 cdef class AioMysqlConnector(BaseConnector):
     pass

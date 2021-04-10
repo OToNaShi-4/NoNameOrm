@@ -1,8 +1,10 @@
-from typing import Coroutine
+import asyncio
+from typing import Coroutine, Callable
 
 from DB.Generator import SqlGenerator
 from Error.DBError import *
 from DB.Connector cimport BaseConnector, ConnectorType
+from Ext import generate_table
 
 cdef public DB instance = None
 
@@ -18,19 +20,28 @@ cdef class DB:
             raise DBInstanceError()
         kwargs['cr'] = True
         global instance
-        instance = DB(cls, * args, **kwargs)
+        instance = DB(cls, *args, **kwargs)
         return instance
+
+    @staticmethod
+    def GenerateTable():
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(generate_table())
 
     @property
     def connector(self):
         return self._connector
 
     @property
-    def execute(self)->Coroutine:
+    def execute(self)-> Coroutine or Callable:
         if self._connector.isAsync:
             return self.connector.asyncProcess
         else:
             return self.connector.process
+
+    @property
+    def executeSql(self):
+        return self.connector.execute
 
     @property
     def instance(self):
@@ -49,4 +60,3 @@ cdef class DB:
         if not instance:
             raise
         return instance
-

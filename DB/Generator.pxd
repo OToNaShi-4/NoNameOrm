@@ -1,5 +1,5 @@
 # cython_ext: language_level=3
-from Model.DataModel cimport _DataModel
+from Model.ModelProperty cimport BaseProperty
 from Model.ModelProperty cimport FilterListCell
 
 cdef enum sqlType:
@@ -13,8 +13,11 @@ cdef class JoinCell:
         JoinType Type
         object key
 
-cdef class SqlGenerator:
+cdef class BaseSqlGenerator:
     cdef  sqlType currentType
+    cdef public tuple Build(self)
+
+cdef class SqlGenerator(BaseSqlGenerator):
     cdef  list selectCol
     cdef  FilterListCell whereCol
     cdef  object target
@@ -34,3 +37,9 @@ cdef class SqlGenerator:
     @staticmethod
     cdef str _getWhereCellStr(FilterListCell cur, list params)
     cdef str build_join(self)
+
+cdef class TableGenerator(BaseSqlGenerator):
+    cdef object model
+    cpdef public tuple Build(self)
+    @staticmethod
+    cdef str build_col(BaseProperty col)
