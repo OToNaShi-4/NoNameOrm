@@ -1,8 +1,8 @@
 # cython_ext: language_level=3
 # cython: c_string_type=unicode, c_string_encoding=utf8
-from DB.DB cimport DB
-from DB.Generator cimport SqlGenerator
-from Model.DataModel cimport ModelInstance
+from NonameOrm.DB.DB cimport DB
+from NonameOrm.DB.Generator cimport SqlGenerator
+from NonameOrm.Model.DataModel cimport ModelInstance
 from .ModelProperty cimport *
 
 cdef class BaseModelExecutor:

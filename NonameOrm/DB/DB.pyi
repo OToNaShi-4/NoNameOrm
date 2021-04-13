@@ -1,7 +1,6 @@
-from ctypes import Union
 from typing import Callable, Coroutine
 
-from DB.Connector import BaseConnector
+from NonameOrm.DB.Connector import BaseConnector
 
 
 class DB:
@@ -12,6 +11,8 @@ class DB:
 
     @property
     def execute(self) -> Coroutine or Callable: ...
+
+    def GenerateTable(self) -> DB: ...
 
     @property
     def instance(self) -> DB: ...

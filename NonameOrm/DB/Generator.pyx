@@ -2,9 +2,10 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 from typing import List
 
-from Model.DataModel cimport _DataModel
-from Error.SqlError import *
-from Model.ModelProperty cimport BaseProperty, FilterListCell, Relationship
+from NonameOrm.Error.SqlError import *
+from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell
+from NonameOrm.Model.ModelProperty cimport Relationship
+from NonameOrm.Model.ModelProperty cimport AutoIncrement
 
 cdef dict relationshipMap = {
     Relationship.AND          : " AND ",
@@ -79,7 +80,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         if isinstance(target, str):
             self.target = target
         else:
-            from Model.DataModel import DataModel
+            from NonameOrm.Model.DataModel import DataModel
             assert isinstance(target, type) and issubclass(target, DataModel), 'Form仅支持字符串或者DataModel子类'
             self.target = target.tableName
         return self
@@ -246,8 +247,8 @@ cdef class TableGenerator(BaseSqlGenerator):
 
         # 是否主键
         if col.isPk:
-            from Model.ModelProperty import AutoIncrement
-            temp += "AUTO_INCREMENT " if isinstance(col.Default, AutoIncrement) else ""
+
+            temp += "AUTO_INCREMENT " if col.Default==AutoIncrement else ""
         else:
             temp += ("DEFAULT " + col.toDBValue(col.Default)) if col.hasDefault else ""
 

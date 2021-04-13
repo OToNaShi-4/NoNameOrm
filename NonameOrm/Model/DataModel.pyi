@@ -1,8 +1,8 @@
 from typing import Type, Optional, List
 
-from DB.DB import DB
-from Model.ModelExcutor import AsyncModelExecutor
-from Model.ModelProperty import BaseProperty, ForeignKey
+from NonameOrm.DB.DB import DB
+from NonameOrm.Model.ModelExcutor import AsyncModelExecutor
+from NonameOrm.Model.ModelProperty import BaseProperty, ForeignKey
 
 
 class ModelInstance(dict):
@@ -33,4 +33,5 @@ class DataModel(_DataModel,ModelInstance, metaclass=_DataModelMeta):
 
     @classmethod
     def getAsyncExecutor(cls, work=None) -> AsyncModelExecutor:...
+
 

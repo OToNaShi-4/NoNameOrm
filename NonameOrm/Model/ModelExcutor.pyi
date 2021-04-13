@@ -2,8 +2,8 @@ from typing import List, Any
 
 from DB.DB import DB
 from DB.Generator import SqlGenerator
-from Model.DataModel import ModelInstance, DataModel
-from Model.ModelProperty import BaseProperty, FilterListCell
+from NonameOrm.Model import ModelInstance, DataModel
+from NonameOrm.Model import BaseProperty, FilterListCell
 
 
 class BaseModelExecutor:

@@ -10,9 +10,14 @@ ex = []
 for i, j, k in os.walk('./'):
     for file in k:
         if file.endswith('.pyx'):
-            ex.append(Extension('*', [(i if i.endswith('/') else i+'/') + file]))
+            ex.append(Extension('*', [(i if i.endswith('/') else i + '/') + file]))
 
 setup(
-    ext_modules=cythonize(ex,compiler_directives={'language_level' : "3"},),
+    name='NonameOrm',
+    python_requires='>=3.7.0',
+    version='0.0.3a',  # 包的版本
+    packages=["NonameOrm"],
+    package_data={"NonameOrm": ["*.pyi", "**/*.pyi"]},
+    ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}, ),
     zip_safe=False,
 )

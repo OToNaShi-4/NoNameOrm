@@ -1,5 +1,6 @@
 import functools
-from DB.DB import DB
+
+from NonameOrm.DB.DB import DB
 
 def use_database(fun):
     @functools.wraps(fun)

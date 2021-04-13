@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Any, TypedDict, Optional
 
-from Model.DataModel import DataModel
-from Model.ModelProperty import FilterListCell
+from NonameOrm.Model import DataModel
+from NonameOrm.Model import FilterListCell
 
 
 class InsertCell(TypedDict):
@@ -92,7 +92,7 @@ class ForeignType(Enum):
 
 
 class ForeignKey(dict):
-    import Model.DataModel
+    from NonameOrm import Model
     target: Model.DataModel.DataModel
     bindCol: BaseProperty
     Type: ForeignType

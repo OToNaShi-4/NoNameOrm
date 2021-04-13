@@ -1,11 +1,10 @@
 import json
 
-from Ext.Decorators import use_database
-from Model.DataModel import DataModel, AsyncModelExecutor
-from Model.ModelProperty import *
-from DB.Generator import SqlGenerator, TableGenerator
-from DB.DB import DB
-from DB.Connector import AioMysqlConnector
+from NonameOrm.Ext.Decorators import use_database
+from NonameOrm.Model.DataModel import DataModel
+from NonameOrm.Model.ModelProperty import *
+from NonameOrm.DB.DB import DB
+from NonameOrm.DB.Connector import AioMysqlConnector
 import asyncio
 
 
@@ -38,8 +37,8 @@ if __name__ == '__main__':
         'port'    : 3306,
         'db'      : 'test_db',
         'user'    : 'root',
-        # 'password': '12345678'
-        'password': '888888'
+        # 'password': '123456'
+        'password': '88888888'
     })).GenerateTable()
 
     loop.run_until_complete(main())

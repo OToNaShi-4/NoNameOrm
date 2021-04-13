@@ -2,9 +2,9 @@ from typing import List
 
 
 async def generate_table():
-    from DB.DB import DB
-    from DB.Generator import TableGenerator
-    from Model.DataModel import _DataModelMeta, DataModel
+    from NonameOrm.DB.DB import DB
+    from NonameOrm.DB.Generator import TableGenerator
+    from NonameOrm.Model.DataModel import DataModel, _DataModelMeta
     modelList: List[DataModel] = _DataModelMeta.ModelList
     db = DB.getInstance()
     dbName = db.connector.config.get('db')

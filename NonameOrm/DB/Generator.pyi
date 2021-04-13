@@ -1,7 +1,7 @@
 from typing import List, Tuple
 
-from Model.DataModel import DataModel
-from Model.ModelProperty import BaseProperty, FilterListCell, ForeignKey
+from NonameOrm.Model import DataModel
+from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell, ForeignKey
 
 
 class JoinCell:

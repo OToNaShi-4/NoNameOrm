@@ -1,4 +1,4 @@
-from Error.BaseOrmError import BaseOrmError
+from NonameOrm.Error.BaseOrmError import BaseOrmError
 
 
 class SqlInStanceError(BaseOrmError):

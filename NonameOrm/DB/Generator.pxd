@@ -1,6 +1,6 @@
 # cython_ext: language_level=3
-from Model.ModelProperty cimport BaseProperty
-from Model.ModelProperty cimport FilterListCell
+from NonameOrm.Model.ModelProperty cimport BaseProperty
+from NonameOrm.Model.ModelProperty cimport FilterListCell
 
 cdef enum sqlType:
     SELECT, INSERT, DELETE, UPDATE, NONE

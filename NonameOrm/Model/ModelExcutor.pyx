@@ -2,12 +2,13 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 from typing import List
 
-from DB.Generator cimport SqlGenerator, sqlType
-from Error.DBError import UpdateWithOutPrimaryKeyError, DeleteWithOutPrimaryKeyError
+from NonameOrm.DB.Generator cimport SqlGenerator, sqlType
+from NonameOrm.Error.DBError import DeleteWithOutPrimaryKeyError, UpdateWithOutPrimaryKeyError
 
-from Model.DataModel cimport ModelInstance, InstanceList
+from NonameOrm.Model.DataModel cimport ModelInstance, InstanceList
+
 from .ModelProperty cimport *
-from DB.DB cimport DB
+from NonameOrm.DB.DB cimport DB
 
 cdef class BaseModelExecutor:
     def __init__(self, model, work=None):
@@ -128,7 +129,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         res = await self.execute()
 
         # 外键插入
-        from Model.ModelProperty import ForeignType
+        from NonameOrm.Model.ModelProperty import ForeignType
         for fk in self.model.fk:
             if fk.name not in instance:
                 continue
@@ -158,7 +159,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             list params = [cur.updateCell(instance[cur.name]) for cur in self.model.col]
 
         self.sql.update(self.model).set(*params).where(self.model.pkCol == instance[self.model.pkName])
-        from Model.ModelProperty import ForeignType
+        from NonameOrm.Model.ModelProperty import ForeignType
         for fk in self.model.fk:
             if fk.name in instance:
                 if fk.Type == ForeignType.ONE_TO_ONE:
