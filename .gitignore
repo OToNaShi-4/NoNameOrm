@@ -5,6 +5,8 @@
 /.vscode/
 /bin/
 /build/
+/dist/
+*.egg-info
 *.so
 *.c
 .classpath
