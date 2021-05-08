@@ -34,8 +34,9 @@ cdef class AioMysqlConnector(BaseConnector):
     def config(self):
         return self._config
 
-    async def getCon(self):
-        return await self._pool.acquire()
+    @property
+    def getCon(self):
+        return self._pool.acquire
 
     async def releaseCon(self, con):
         await self._pool.release(con)

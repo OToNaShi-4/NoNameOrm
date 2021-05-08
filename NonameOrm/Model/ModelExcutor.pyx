@@ -21,6 +21,9 @@ cdef class BaseModelExecutor:
         self.sql = SqlGenerator().From(model)
         self.__dict__ = {}
 
+    def reset(self):
+        self.sql = SqlGenerator().From(self.model)
+
     cdef FilterListCell instanceToFilter(self, ModelInstance instance):
         cdef:
             int i
@@ -123,22 +126,22 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             insertData.append(cur.insertCell(instance[cur.name]))
 
         if not insertData:
-            pass
+            return instance
 
         self.sql.insert(self.model).values(*insertData)
         res = await self.execute()
-
         # 外键插入
         from NonameOrm.Model.ModelProperty import ForeignType
         for fk in self.model.fk:
-            if fk.name not in instance:
+            if fk['name'] not in instance or not instance[fk['name']]:
                 continue
-            if fk.Type == ForeignType.ONE_TO_ONE:
-                res[fk.name] = await fk.target.getAsyncExecutor(self.work).save(instance[fk.name])
+            if fk['Type'] == ForeignType.ONE_TO_ONE :
+                instance[fk['name']][fk['targetBindCol'].name] = res[fk['bindCol'].name]
+                res[fk['name']] = await fk.target.getAsyncExecutor(self.work).save(instance[fk['name']])
                 continue
-            res[fk.name] = []
-            for i in instance[fk.name]:
-                res[fk.name].append(await fk.target.getAsyncExecutor(self.work).save(instance[fk.name]))
+            res[fk['name']] = []
+            for i in instance[fk['name']]:
+                res[fk['name']].append(await fk['target'].getAsyncExecutor(self.work).save(instance[fk['name']]))
         return res
 
     async def delete(self, instance):

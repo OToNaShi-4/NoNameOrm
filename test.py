@@ -20,18 +20,27 @@ class User(DataModel):
     avatar = StrProperty()
     enable = BoolProperty(default=True, targetType=boolSupportType.bit)
     locked = BoolProperty(default=False, targetType=boolSupportType.bit)
-    person_id = IntProperty()
-    # person = ForeignKey(Person, bindCol=person_id)
+    person = ForeignKey(Person)
 
 
 class abc:
 
     @use_database
     async def test(self):
-        mapper = User(id=32)
-        instance = await User.getAsyncExecutor(self).getAnyMatch(mapper)
+        user=User({
+    "avatar": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83ep0Cb1HGLBTDxicbia9s5Pc7l94uHD7BfcQIhibVXVAlYK9Y5ayibCEcqlOAYSaNneQ6YeUiaiaTwDibM7bA/132",
+    "enable": True,
+    "locked": True,
+    "person": {
+        "city": None,
+        "id_card_no": "Vvv",
+        "name": "Vvvv"
+    }
+})
+        print(user)
+        instance = await User.getAsyncExecutor(self).save(user)
         return instance
-        # return await User.getAsyncExecutor(self).findForeignKey(instance)
+
 
 
 loop = asyncio.get_event_loop()
@@ -46,10 +55,19 @@ if __name__ == '__main__':
     DB.create(connector=AioMysqlConnector(**{
         'host': '127.0.0.1',
         'port': 3306,
-        'db': 'cy_live_dev',
+        'db': 'test_db',
         'user': 'root',
         # 'password': '123456'
         'password': '888888'
-    }))
-
+    })).GenerateTable()
+    # user = User({
+    #     "avatar": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83ep0Cb1HGLBTDxicbia9s5Pc7l94uHD7BfcQIhibVXVAlYK9Y5ayibCEcqlOAYSaNneQ6YeUiaiaTwDibM7bA/132",
+    #     "enable": True,
+    #     "locked": True,
+    #     "person": {
+    #         "city": None,
+    #         "id_card_no": "Vvv",
+    #         "name": "Vvvv"
+    #     }
+    # })
     loop.run_until_complete(main())

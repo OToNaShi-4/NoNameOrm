@@ -248,7 +248,7 @@ cdef class TableGenerator(BaseSqlGenerator):
         # 是否主键
         if col.isPk:
 
-            temp += "AUTO_INCREMENT " if col.Default==AutoIncrement else ""
+            temp += "AUTO_INCREMENT " if col._default==AutoIncrement else ""
         else:
             temp += ("DEFAULT " + col.toDBValue(col.Default)) if col.hasDefault else ""
 

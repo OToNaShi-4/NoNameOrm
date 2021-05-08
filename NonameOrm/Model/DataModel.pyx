@@ -24,8 +24,7 @@ cdef class _DataModel:
 
 
 class _DataModelMeta(type):
-
-    ModelList:List['DataModel'] = []
+    ModelList: List['DataModel'] = []
 
     def __new__(cls, str name, bases: tuple, attrs: dict, **kwargs):
         attrs['col'], attrs['mapping'], attrs['fk'] = _DataModelMeta.getPropertyObj(cls, attrs)
@@ -55,14 +54,14 @@ class _DataModelMeta(type):
                 mapping[key] = item
             elif isinstance(item, ForeignKey):
                 fk.append(item)
-                mapping[item.name] = item
+                mapping[key] = item
         return temp, mapping, fk
 
 
 cdef class ModelInstance(dict):
     def __init__(self, *args, **kwargs):
         cdef:
-            BaseProperty v
+            str k
             cdef dict data = kwargs
 
 
@@ -77,11 +76,14 @@ cdef class ModelInstance(dict):
         else:
             super().__init__()
 
-        for v in object.__getattribute__(self, 'object').col:
-            if v.name in data:
-                self[v.name] = v.toObjValue(data[v.name])
-            elif v.name in self:
-                self[v.name] = v.toObjValue(self[v.name])
+        for k, v in object.__getattribute__(self, 'object').mapping.items():
+            if k in data:
+                if isinstance(v, BaseProperty):
+                    self[k] = v.toObjValue(data[k])
+                elif isinstance(v,ForeignKey):
+                    self[k] = v['target'](data[k])
+            elif k in self:
+                self[k] = v.toObjValue(self[k])
             else:
                 self[v.name] = v.Default
 

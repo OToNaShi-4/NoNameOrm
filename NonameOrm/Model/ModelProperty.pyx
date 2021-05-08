@@ -72,7 +72,6 @@ cdef class BaseProperty:
         self._init(*args, **kwargs)
         self._default = default
 
-
     def _init(*args, **kwargs):
         pass
 
@@ -222,6 +221,8 @@ class BoolProperty(BaseProperty):
         return '1' if value else '0'
 
     def toObjValue(self, object value) -> bool:
+        if isinstance(value,bool):
+            return value
         if self.targetType == boolSupportType.tinyInt:
             return bool(value)
         elif self.targetType == boolSupportType.varchar:
@@ -272,7 +273,7 @@ class ForeignKey(dict):
     name: str
 
     def __init__(self,
-                 target,
+                 target=None,
                  Type: ForeignType = ForeignType.ONE_TO_ONE,
                  bindCol: Optional[BaseProperty] = None,
                  targetBindCol: Optional[BaseProperty] = None,
@@ -288,6 +289,8 @@ class ForeignKey(dict):
         from NonameOrm.Model.DataModel import DataModel
         if not issubclass(owner, DataModel):
             raise ForeignKeyDependError()
+        if self['target'] is None:
+            self['target'] = owner
         self['owner'] = owner
         if not self.bindCol:
             self['bindCol'] = owner.pkCol
