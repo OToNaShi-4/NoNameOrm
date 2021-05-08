@@ -5,7 +5,8 @@ from typing import Optional
 
 from enum import Enum
 
-from NonameOrm.Error.PropertyError import PropertyVerifyError, PrimaryKeyOverLimitError, PropertyUsageError, ForeignKeyDependError
+from NonameOrm.Error.PropertyError import PropertyVerifyError, PrimaryKeyOverLimitError, PropertyUsageError, \
+    ForeignKeyDependError
 
 cdef class NullDefault:
     pass
@@ -68,8 +69,9 @@ cdef class BaseProperty:
         self.define = define
         self.isPk = pk
         self.Null = Null
-        self._default = default
         self._init(*args, **kwargs)
+        self._default = default
+
 
     def _init(*args, **kwargs):
         pass
@@ -100,20 +102,20 @@ cdef class BaseProperty:
 
     def insertCell(self, value):
         return {
-            'col'  : self,
+            'col': self,
             'value': self.toDBValue(value)
         }
 
     def updateCell(self, value):
         return {
-            'name' : self.name,
+            'name': self.name,
             'value': self.toDBValue(value)
         }
 
-    cdef public toDBValue(self, value):
-        return value if value else 'null'
+    def toDBValue(self, value):
+        return value if value is not None else 'null'
 
-    cdef public toObjValue(self, value):
+    def toObjValue(self, value):
         return value
 
     def __eq__(self, other) -> FilterListCell:
@@ -215,6 +217,10 @@ class BoolProperty(BaseProperty):
     def _init(self, targetType: boolSupportType = boolSupportType.tinyInt, *args, **kwargs):
         self.targetType = targetType
 
+    def toDBValue(self, value):
+
+        return '1' if value else '0'
+
     def toObjValue(self, object value) -> bool:
         if self.targetType == boolSupportType.tinyInt:
             return bool(value)
@@ -269,7 +275,7 @@ class ForeignKey(dict):
                  target,
                  Type: ForeignType = ForeignType.ONE_TO_ONE,
                  bindCol: Optional[BaseProperty] = None,
-                 targetBindCol: Optional[BaseProperty] = None
+                 targetBindCol: Optional[BaseProperty] = None,
                  ):
         super().__init__()
         self['target'] = target
@@ -278,9 +284,9 @@ class ForeignKey(dict):
         self['targetBindCol'] = targetBindCol
 
     def __set_name__(self, owner, name):
-        self.name = name
-        from NonameOrm.Model import DataModel
-        if not issubclass(owner, DataModel.DataModel):
+        self['name'] = name
+        from NonameOrm.Model.DataModel import DataModel
+        if not issubclass(owner, DataModel):
             raise ForeignKeyDependError()
         self['owner'] = owner
         if not self.bindCol:

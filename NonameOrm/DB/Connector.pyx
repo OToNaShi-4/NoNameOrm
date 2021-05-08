@@ -63,6 +63,7 @@ cdef class AioMysqlConnector(BaseConnector):
         cdef object res
         con = kwargs.get('con') if 'con' in kwargs else self.selectCon
         async with con.cursor() as cur:
+            print(sql.Build())
             await cur.execute(*sql.Build())
             if sql.currentType != sqlType.INSERT:
                 res = await cur.fetchall()

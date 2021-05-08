@@ -170,7 +170,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         selectTemp += ",".join([f"{Property.model.tableName}.{Property.name}" for Property in self.selectCol if Property])
         whereTemp, params = self.build_where()
 
-        if len(self.joinList):
+        if self.joinList and len(self.joinList):
             return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + ";", params
         else:
             return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + ";", params

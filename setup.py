@@ -15,9 +15,9 @@ for i, j, k in os.walk('./'):
 setup(
     name='NonameOrm',
     python_requires='>=3.7.0',
-    version='0.0.4a',  # 包的版本
+    version='0.0.5a',  # 包的版本
     packages=["NonameOrm"],
-    package_data={"NonameOrm": ["*.pyi", "**/*.pyi", "__init__.py", "*/__init__.py"]},
+    package_data={"NonameOrm": ["*.pyi", "**/*.pyi", "*.py", "*/*.py", "*.pxd", "*/*.pxd"]},
     ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}, ),
     zip_safe=False,
 )

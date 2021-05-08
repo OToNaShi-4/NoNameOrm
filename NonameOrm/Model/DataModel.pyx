@@ -62,7 +62,6 @@ class _DataModelMeta(type):
 cdef class ModelInstance(dict):
     def __init__(self, *args, **kwargs):
         cdef:
-            str k
             BaseProperty v
             cdef dict data = kwargs
 
@@ -78,11 +77,11 @@ cdef class ModelInstance(dict):
         else:
             super().__init__()
 
-        for k, v in object.__getattribute__(self, 'object').mapping.items():
-            if k in data:
-                self[v.name] = data[k]
-            elif k in self:
-                continue
+        for v in object.__getattribute__(self, 'object').col:
+            if v.name in data:
+                self[v.name] = v.toObjValue(data[v.name])
+            elif v.name in self:
+                self[v.name] = v.toObjValue(self[v.name])
             else:
                 self[v.name] = v.Default
 
