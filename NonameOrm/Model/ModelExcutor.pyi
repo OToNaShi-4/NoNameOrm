@@ -1,9 +1,9 @@
 from typing import List, Any
 
-from DB.DB import DB
-from DB.Generator import SqlGenerator
-from NonameOrm.Model import ModelInstance, DataModel
-from NonameOrm.Model import BaseProperty, FilterListCell
+from NonameOrm.DB.DB import DB
+from NonameOrm.DB.Generator import SqlGenerator
+from NonameOrm.Model.DataModel import ModelInstance, DataModel
+from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell
 
 
 class BaseModelExecutor:
@@ -19,7 +19,7 @@ class BaseModelExecutor:
     @property
     def generator(self) -> SqlGenerator: ...
 
-    def getAnyMatch(self, instance: ModelInstance): ...
+    def findAnyMatch(self, instance: ModelInstance, limit=None, offset=0): ...
 
     def find(self, *cols: List[BaseProperty]): ...
 
@@ -34,13 +34,13 @@ class BaseModelExecutor:
 
 class AsyncModelExecutor(BaseModelExecutor):
 
-    async def getAnyMatch(self, instance: ModelInstance) -> List: ...
+    async def findAnyMatch(self, instance: ModelInstance, limit=None, offset=0) -> List: ...
 
     async def findAllBy(self, Filter: FilterListCell = None): ...
 
     def find(self, *cols: List[BaseProperty]) -> AsyncModelExecutor: ...
 
-    async def By(self, Fileter:FilterListCell) -> ModelInstance:...
+    async def By(self, Fileter: FilterListCell) -> ModelInstance: ...
 
     async def save(self, instance: ModelInstance): ...
 

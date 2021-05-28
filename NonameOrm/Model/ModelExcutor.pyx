@@ -41,7 +41,7 @@ cdef class BaseModelExecutor:
     def generator(self) -> SqlGenerator:
         return self.sql
 
-    def getAnyMatch(self, instance: ModelInstance):
+    def findAnyMatch(self, instance: ModelInstance, int limit = 0, int offset = 0):
         pass
 
     def find(self, *cols: List[BaseProperty]):
@@ -88,9 +88,11 @@ cdef class BaseModelExecutor:
             return None
 
 cdef class AsyncModelExecutor(BaseModelExecutor):
-    async def getAnyMatch(self, instance: ModelInstance) -> List:
+    async def findAnyMatch(self, instance: ModelInstance, int limit = 0, int offset = 0) -> List:
         self.sql.select(*self.model.col)
         self.sql.where(self.instanceToFilter(instance))
+        if limit > 0:
+            self.sql.limit(limit, offset)
         return await self.execute()
 
     async def findAllBy(self, FilterListCell Filter = None):
@@ -104,7 +106,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
     async def findForeignKey(self, instance):
         for fk in self.model.fk:
-            instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(fk.targetBindCol == instance[fk.bindCol.name])
+            instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
+                fk.targetBindCol == instance[fk.bindCol.name])
         return instance
 
     async def By(self, FilterListCell Filter = None):
@@ -135,7 +138,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         for fk in self.model.fk:
             if fk['name'] not in instance or not instance[fk['name']]:
                 continue
-            if fk['Type'] == ForeignType.ONE_TO_ONE :
+            if fk['Type'] == ForeignType.ONE_TO_ONE:
                 instance[fk['name']][fk['targetBindCol'].name] = res[fk['bindCol'].name]
                 res[fk['name']] = await fk.target.getAsyncExecutor(self.work).save(instance[fk['name']])
                 continue
