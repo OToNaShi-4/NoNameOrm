@@ -217,8 +217,12 @@ class BoolProperty(BaseProperty):
         self.targetType = targetType
 
     def toDBValue(self, value):
-
-        return '1' if value else '0'
+        if self.targetType == boolSupportType.tinyInt:
+            return 1 if value else 0
+        elif self.targetType == boolSupportType.varchar:
+            return 'true' if value else 'false'
+        elif self.targetType == boolSupportType.bit:
+            return b'\x01' if value else b'\x00'
 
     def toObjValue(self, object value) -> bool:
         if isinstance(value,bool):

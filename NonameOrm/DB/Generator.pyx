@@ -8,19 +8,19 @@ from NonameOrm.Model.ModelProperty cimport Relationship
 from NonameOrm.Model.ModelProperty cimport AutoIncrement
 
 cdef dict relationshipMap = {
-    Relationship.AND          : " AND ",
-    Relationship.OR           : " OR ",
-    Relationship.EQUAL        : " = ",
-    Relationship.BIGGER       : " > ",
-    Relationship.SMALLER      : " < ",
-    Relationship.NOTEQUAL     : " != ",
-    Relationship.BIGGER_EQUAL : " >= ",
+    Relationship.AND: " AND ",
+    Relationship.OR: " OR ",
+    Relationship.EQUAL: " = ",
+    Relationship.BIGGER: " > ",
+    Relationship.SMALLER: " < ",
+    Relationship.NOTEQUAL: " != ",
+    Relationship.BIGGER_EQUAL: " >= ",
     Relationship.SMALLER_EQUAL: " <= ",
 }
 
 cdef dict joinTypeMap = {
-    JOIN      : "JOIN ",
-    LEFT_JOIN : "LEFT JOIN ",
+    JOIN: "JOIN ",
+    LEFT_JOIN: "LEFT JOIN ",
     RIGHT_JOIN: "RIGHT JOIN ",
     INNER_JOIN: "INNER JOIN ",
 }
@@ -138,7 +138,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         # 将插入数据压入列表
         for cur in self.selectCol:
             cols.append((<BaseProperty> cur.get('col')).name)
-            params.append(str(cur.get('value')))
+            params.append(cur.get('value'))
 
         # 拼接完整sql语句
         insertTemp += "(" + ",".join(cols) + ") values (" + ",".join(['%s' for i in range(len(params))]) + ');'
@@ -167,7 +167,8 @@ cdef class SqlGenerator(BaseSqlGenerator):
             str selectTemp = "SELECT "
             list params
 
-        selectTemp += ",".join([f"{Property.model.tableName}.{Property.name}" for Property in self.selectCol if Property])
+        selectTemp += ",".join(
+            [f"{Property.model.tableName}.{Property.name}" for Property in self.selectCol if Property])
         whereTemp, params = self.build_where()
 
         if self.joinList and len(self.joinList):
@@ -248,11 +249,16 @@ cdef class TableGenerator(BaseSqlGenerator):
         # 是否主键
         if col.isPk:
 
-            temp += "AUTO_INCREMENT " if col._default==AutoIncrement else ""
+            temp += "AUTO_INCREMENT " if col._default == AutoIncrement else ""
         else:
-            temp += ("DEFAULT " + col.toDBValue(col.Default)) if col.hasDefault else ""
+            temp += ("DEFAULT " + _processValue(col.toDBValue(col.Default))) if col.hasDefault else ""
 
         # 额外定义
         temp += col.define + ",\n"
 
         return temp
+
+cdef _processValue(object data):
+    if isinstance(data, bytes):
+       return '1' if data == b'\x01' else '0'
+    return data

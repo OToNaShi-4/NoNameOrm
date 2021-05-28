@@ -1,4 +1,5 @@
 import json
+import logging
 
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
@@ -7,6 +8,8 @@ from NonameOrm.DB.DB import DB
 from NonameOrm.DB.Connector import AioMysqlConnector
 import asyncio
 
+logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
+logger = logging.getLogger(__name__)
 
 class Person(DataModel):
     id = IntProperty(pk=True)
@@ -37,7 +40,6 @@ class abc:
                 "name": "Vvvv"
             }
         })
-        print(user)
         instance = await User.getAsyncExecutor(self).save(user)
         return instance
 
@@ -51,24 +53,13 @@ async def main():
 
 
 if __name__ == '__main__':
-    # DB.create(connector=AioMysqlConnector(**{
-    #     'host': '127.0.0.1',
-    #     'port': 3306,
-    #     'db': 'test_db',
-    #     'user': 'root',
-    #     # 'password': '123456'
-    #     'password': '888888'
-    # })).GenerateTable()
-    user = User({
-        "avatar": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83ep0Cb1HGLBTDxicbia9s5Pc7l94uHD7BfcQIhibVXVAlYK9Y5ayibCEcqlOAYSaNneQ6YeUiaiaTwDibM7bA/132",
-        "enable": True,
-        "locked": True,
-        "person": {
-            "city": None,
-            "id_card_no": "Vvv",
-            "name": "Vvvv"
-        }
-    })
-    print(user)
+    DB.create(connector=AioMysqlConnector(**{
+        'host': '127.0.0.1',
+        'port': 3306,
+        'db': 'test_db',
+        'user': 'root',
+        # 'password': '123456'
+        'password': '888888'
+    })).GenerateTable()
 
-    # loop.run_until_complete(main())
+    loop.run_until_complete(main())
