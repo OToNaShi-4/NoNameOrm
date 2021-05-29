@@ -206,7 +206,7 @@ class FloatProperty(BaseProperty):
 class boolSupportType(Enum):
     tinyInt = 'tinyint'
     bit = 'bit'
-    varchar = 'varchar(1)'
+    varchar = 'varchar(5)'
 
 
 class BoolProperty(BaseProperty):

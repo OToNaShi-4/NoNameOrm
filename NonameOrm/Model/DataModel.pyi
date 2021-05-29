@@ -1,4 +1,4 @@
-from typing import Type, Optional, List
+from typing import Type, Optional, List, Tuple, Dict
 
 from NonameOrm.DB.DB import DB
 from NonameOrm.Model.ModelExcutor import AsyncModelExecutor
@@ -21,8 +21,8 @@ class _DataModelMeta(type):
 
 
 class DataModel(_DataModel,ModelInstance, metaclass=_DataModelMeta):
-    col: tuple
-    mapping: dict
+    col: Tuple[BaseProperty]
+    mapping: Dict[str,BaseProperty]
     tableName: str
     _db: Type[DB] = DB
     pkName: Optional[str] = None

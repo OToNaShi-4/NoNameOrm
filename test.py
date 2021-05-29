@@ -11,6 +11,7 @@ import asyncio
 logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
+
 class Person(DataModel):
     id = IntProperty(pk=True)
     city = StrProperty()
@@ -40,8 +41,7 @@ class abc:
                 "name": "Vvvv"
             }
         })
-        instance = await User.getAsyncExecutor(self).save(user)
-        return instance
+        await User.getAsyncExecutor().find(User.id, User.locked).By((User.id == 3) & (User.locked == False))
 
 
 loop = asyncio.get_event_loop()
