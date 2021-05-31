@@ -24,7 +24,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
     cdef  str limit
     cdef:
         list updateCol
-        list joinList
+        list _joinList
 
     cdef public SqlGenerator update(self, object target)
     cpdef public SqlGenerator From(self, object target)

@@ -115,3 +115,18 @@ class DataModel(_DataModel, metaclass=_DataModelMeta):
     @classmethod
     def getAsyncExecutor(cls, work=None) -> AsyncModelExecutor:
         return AsyncModelExecutor(cls, work)
+
+
+class MiddleDataModel(DataModel):
+
+    @classmethod
+    def instanceBuilder(cls, *args, **kwargs) -> ModelInstance:
+        pass
+
+    @classmethod
+    def getOtherModelBy(cls, model:DataModel) -> DataModel:
+        return cls.getOtherFkBy(model).target
+
+    @classmethod
+    def getOtherFkBy(cls,model) -> ForeignKey:
+        return cls.fk[0] if cls.fk[0].target is not model else cls.fk[1]

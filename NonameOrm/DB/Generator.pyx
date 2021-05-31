@@ -184,8 +184,8 @@ cdef class SqlGenerator(BaseSqlGenerator):
             foreignKey = cell.key
             joinTemp += "       " + joinTypeMap.get(cell.Type) + \
                         foreignKey.target.tableName + \
-                        " on " + foreignKey.owner.tableName + "." + foreignKey.owner.pkName + " = " + \
-                        foreignKey.target.tableName + "." + foreignKey.target.pkName + "\n"
+                        " on " + foreignKey.owner.tableName + "." + foreignKey.bindCol.name + " = " + \
+                        foreignKey.target.tableName + "." + foreignKey.targetBindCol.name + "\n"
         return joinTemp
 
     cdef tuple build_where(self):
@@ -205,6 +205,12 @@ cdef class SqlGenerator(BaseSqlGenerator):
                 break
             cur = cur.next
         return whereTemp, params
+
+    @property
+    def joinList(self):
+        if not self._joinList:
+            self._joinList = []
+        return self._joinList
 
     @staticmethod
     cdef str _getWhereCellStr(FilterListCell cur, list params):
@@ -232,6 +238,8 @@ cdef class TableGenerator(BaseSqlGenerator):
             sqlTemp += "   constraint " + self.model.tableName + "_pk PRIMARY KEY (" + self.model.pkCol.name + ")\n"
 
         # 收尾
+        if sqlTemp.endswith(',\n'):
+            sqlTemp = sqlTemp[:-2] + '\n'
         sqlTemp += ") ENGINE=InnoDB DEFAULT CHARSET=UTF8MB4;"
         print(sqlTemp)
         return sqlTemp,
@@ -260,5 +268,5 @@ cdef class TableGenerator(BaseSqlGenerator):
 
 cdef _processValue(object data):
     if isinstance(data, bytes):
-       return '1' if data == b'\x01' else '0'
+        return '1' if data == b'\x01' else '0'
     return data

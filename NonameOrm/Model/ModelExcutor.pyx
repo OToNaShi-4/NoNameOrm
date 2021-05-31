@@ -6,6 +6,7 @@ from NonameOrm.DB.Generator cimport SqlGenerator, sqlType
 from NonameOrm.Error.DBError import DeleteWithOutPrimaryKeyError, UpdateWithOutPrimaryKeyError
 
 from NonameOrm.Model.DataModel cimport ModelInstance, InstanceList
+from NonameOrm.Model.ModelProperty import ForeignType
 
 from .ModelProperty cimport *
 from NonameOrm.DB.DB cimport DB
@@ -104,10 +105,15 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         self.sql.select(*cols)
         return self
 
-    async def findForeignKey(self, instance):
+    async def findForeignKey(self, instance, deep=False):
         for fk in self.model.fk:
-            instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
-                fk.targetBindCol == instance[fk.bindCol.name])
+            if fk.Type == ForeignType.MANY_TO_MANY:
+                exc:AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
+                exc.sql.join()
+                pass
+            else:
+                instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
+                    fk.targetBindCol == instance[fk.bindCol.name])
         return instance
 
     async def By(self, FilterListCell Filter = None):

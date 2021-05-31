@@ -4,7 +4,7 @@ from typing import List
 async def generate_table():
     from NonameOrm.DB.DB import DB
     from NonameOrm.DB.Generator import TableGenerator
-    from NonameOrm.Model.DataModel import DataModel, _DataModelMeta
+    from NonameOrm.Model.DataModel import DataModel, _DataModelMeta,MiddleDataModel
     modelList: List[DataModel] = _DataModelMeta.ModelList
     db = DB.getInstance()
     dbName = db.connector.config.get('db')
@@ -14,7 +14,7 @@ async def generate_table():
     con = await db.connector.getCon()
     try:
         for model in modelList:
-            if model.tableName in nameList or model == DataModel:
+            if model.tableName in nameList or model == DataModel or model == MiddleDataModel:
                 continue
             await db.executeSql(*TableGenerator(model).Build(), con)
     except Exception as e:

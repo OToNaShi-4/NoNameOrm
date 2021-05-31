@@ -1,6 +1,7 @@
 import json
 import logging
 
+from NonameOrm.DB.Generator import SqlGenerator
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty import *
@@ -24,7 +25,7 @@ class User(DataModel):
     avatar = StrProperty()
     enable = BoolProperty(default=True, targetType=boolSupportType.bit)
     locked = BoolProperty(default=False, targetType=boolSupportType.bit)
-    person = ForeignKey(Person)
+    person = ForeignKey(Person, Type=ForeignType.MANY_TO_MANY)
 
 
 class abc:
@@ -53,13 +54,18 @@ async def main():
 
 
 if __name__ == '__main__':
-    DB.create(connector=AioMysqlConnector(**{
-        'host': '127.0.0.1',
-        'port': 3306,
-        'db': 'test_db',
-        'user': 'root',
-        # 'password': '123456'
-        'password': '888888'
-    })).GenerateTable()
+    # DB.create(connector=AioMysqlConnector(**{
+    #     'host': '127.0.0.1',
+    #     'port': 3306,
+    #     'db': 'test_db',
+    #     'user': 'root',
+    #     # 'password': '123456'
+    #     'password': '88888888'
+    # })).GenerateTable()
+    # print(User.person.target.getOtherFkBy(User))
+    sql = SqlGenerator()
+    res = sql.select(*Person.col).From(Person).join(Person.user).where(User.person.middleModel.user_id == 1).Build()
+    print(res)
+    # loop.run_until_complete(main())
+    # print(Person.user)
 
-    loop.run_until_complete(main())

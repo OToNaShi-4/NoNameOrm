@@ -10,6 +10,7 @@
 *.so
 *.c
 .classpath
+*.h
 .project
 .settings
 .idea

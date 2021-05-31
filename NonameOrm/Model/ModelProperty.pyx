@@ -225,7 +225,7 @@ class BoolProperty(BaseProperty):
             return b'\x01' if value else b'\x00'
 
     def toObjValue(self, object value) -> bool:
-        if isinstance(value,bool):
+        if isinstance(value, bool):
             return value
         if self.targetType == boolSupportType.tinyInt:
             return bool(value)
@@ -281,25 +281,101 @@ class ForeignKey(dict):
                  Type: ForeignType = ForeignType.ONE_TO_ONE,
                  bindCol: Optional[BaseProperty] = None,
                  targetBindCol: Optional[BaseProperty] = None,
+                 middleModel=None
                  ):
         super().__init__()
         self['target'] = target
         self['bindCol'] = bindCol
         self['Type'] = Type
         self['targetBindCol'] = targetBindCol
+        self['middleModel'] = middleModel
+
+    def _processMTM(self):
+        from NonameOrm.Model.DataModel import MiddleDataModel
+        cdef:
+            str name = self.owner.__name__.replace('Model', '') + self.target.__name__.replace('Model', '')
+            dict attrs = {}
+
+        # 创建主键关联字段
+        attrs[self.owner.tableName + '_id'] = self.owner.pkCol.__class__()
+        attrs[self.target.tableName + '_id'] = self.target.pkCol.__class__()
+
+        # 创建外键绑定字段
+        attrs[self.owner.tableName] = ForeignKey(
+            self.owner,
+            Type=ForeignType.ONE_TO_MANY,
+            bindCol=attrs[self.owner.tableName + '_id'],
+            targetBindCol=self.owner.pkCol
+        )
+        attrs[self.target.tableName] = ForeignKey(
+            self.target,
+            Type=ForeignType.ONE_TO_MANY,
+            bindCol=attrs[self.target.tableName + '_id'],
+            targetBindCol=self.target.pkCol
+        )
+
+        # 创建中间模型类
+        self['middleModel'] = type(name, (MiddleDataModel,), attrs)
+
+        # 添加目标模型类外键
+        fk = ForeignKey(
+            self['middleModel'],
+            ForeignType.ONE_TO_MANY,
+            bindCol=self.target.pkCol,
+            targetBindCol=attrs[self.target.tableName + '_id'],
+            middleModel=self['middleModel']
+        )
+        fk['owner'] = self.target
+
+        setattr(self.target, self.owner.tableName, fk)
+
+
+        # 更改本外键指向
+        self['target'] = self['middleModel']
+        self['targetBindCol'] = attrs[self.owner.tableName + '_id']
 
     def __set_name__(self, owner, name):
         self['name'] = name
+        self['owner'] = owner
         from NonameOrm.Model.DataModel import DataModel
         if not issubclass(owner, DataModel):
             raise ForeignKeyDependError()
+        if self.Type == ForeignType.MANY_TO_MANY and not self.middleModel:
+            self._processMTM()
+        elif self.Type == ForeignType.ONE_TO_MANY and self.targetBindCol is None:
+            raise RuntimeError("一对多外键需绑定目标表的指定字段")
         if self['target'] is None:
             self['target'] = owner
-        self['owner'] = owner
+
         if not self.bindCol:
             self['bindCol'] = owner.pkCol
         if not self.targetBindCol:
             self['targetBindCol'] = self.target.pkCol
 
+        self._processTarget()
+
+    def _processTarget(self):
+        if self.Type == ForeignType.MANY_TO_MANY:
+            pass
+        else:
+            if hasattr(self.target, self.owner.tableName):
+                return
+            setattr(self.target, self.owner.tableName, ForeignKey(
+                self.owner,
+                ForeignType.ONE_TO_ONE,
+                bindCol=self.targetBindCol,
+                targetBindCol=self.bindCol
+            ))
+
+    @property
+    def directTarget(self):
+        if self.Type == ForeignType.MANY_TO_MANY:
+            return self.target.getOtherModelBy(self.owner)
+        else:
+            return self.target
+
     def __getattribute__(self, str item):
-        return object.__getattribute__(self, 'get')(item, None)
+        try:
+            return object.__getattribute__(self, item)
+        except AttributeError:
+            return object.__getattribute__(self, 'get')(item, None)
