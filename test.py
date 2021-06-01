@@ -32,17 +32,10 @@ class abc:
 
     @use_database
     async def test(self):
-        user = User({
-            "avatar": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83ep0Cb1HGLBTDxicbia9s5Pc7l94uHD7BfcQIhibVXVAlYK9Y5ayibCEcqlOAYSaNneQ6YeUiaiaTwDibM7bA/132",
-            "enable": True,
-            "locked": True,
-            "person": {
-                "city": None,
-                "id_card_no": "Vvv",
-                "name": "Vvvv"
-            }
-        })
-        await User.getAsyncExecutor().find(User.id, User.locked).By((User.id == 3) & (User.locked == False))
+        exc = Person.getAsyncExecutor()
+        user = await exc.findAllBy(Person.id == 1)
+        await exc.findForeignKey(user)
+        print(user)
 
 
 loop = asyncio.get_event_loop()
@@ -54,18 +47,14 @@ async def main():
 
 
 if __name__ == '__main__':
-    # DB.create(connector=AioMysqlConnector(**{
-    #     'host': '127.0.0.1',
-    #     'port': 3306,
-    #     'db': 'test_db',
-    #     'user': 'root',
-    #     # 'password': '123456'
-    #     'password': '88888888'
-    # })).GenerateTable()
-    # print(User.person.target.getOtherFkBy(User))
-    sql = SqlGenerator()
-    res = sql.select(*Person.col).From(Person).join(Person.user).where(User.person.middleModel.user_id == 1).Build()
-    print(res)
-    # loop.run_until_complete(main())
-    # print(Person.user)
+    DB.create(connector=AioMysqlConnector(**{
+        'host': '127.0.0.1',
+        'port': 3306,
+        'db': 'test_db',
+        'user': 'root',
+        # 'password': '123456'
+        'password': '88888888'
+    })).GenerateTable()
 
+    loop.run_until_complete(main())
+    # print(Person.user)

@@ -291,6 +291,10 @@ class ForeignKey(dict):
         self['middleModel'] = middleModel
 
     def _processMTM(self):
+        """
+        处理多对多关系
+        :return: None
+        """
         from NonameOrm.Model.DataModel import MiddleDataModel
         cdef:
             str name = self.owner.__name__.replace('Model', '') + self.target.__name__.replace('Model', '')
@@ -317,16 +321,21 @@ class ForeignKey(dict):
         # 创建中间模型类
         self['middleModel'] = type(name, (MiddleDataModel,), attrs)
 
-        # 添加目标模型类外键
+        # 实例化目标模型类外键
         fk = ForeignKey(
             self['middleModel'],
-            ForeignType.ONE_TO_MANY,
+            ForeignType.MANY_TO_MANY,
             bindCol=self.target.pkCol,
             targetBindCol=attrs[self.target.tableName + '_id'],
             middleModel=self['middleModel']
         )
+        # 手动给目标表外键绑定所属关系
         fk['owner'] = self.target
 
+        # 手动将外键关联添加到对象模型外键列表中
+        self.target.fk.append(fk)
+
+        # 手动为对象模型添加外键属性
         setattr(self.target, self.owner.tableName, fk)
 
 

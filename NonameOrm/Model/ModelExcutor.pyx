@@ -67,7 +67,7 @@ cdef class BaseModelExecutor:
             return self.model(zip(select, res[0]))
         else:
             instances = InstanceList()
-            for i in range(len(res) - 1):
+            for i in range(len(res)):
                 instances.append(self.model(zip(select, res[0])))
             return instances
 
@@ -108,9 +108,9 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
     async def findForeignKey(self, instance, deep=False):
         for fk in self.model.fk:
             if fk.Type == ForeignType.MANY_TO_MANY:
-                exc:AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
-                exc.sql.join()
-                pass
+                exc: AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
+                exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
+                instance[fk.directTarget.tableName] = await exc.findAllBy(getattr(fk.middleModel,fk.owner.tableName + '_id') == instance[fk.bindCol.name])
             else:
                 instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
                     fk.targetBindCol == instance[fk.bindCol.name])
