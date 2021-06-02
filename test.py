@@ -9,12 +9,38 @@ from NonameOrm.DB.DB import DB
 from NonameOrm.DB.Connector import AioMysqlConnector
 import asyncio
 
-logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
+DATEFORMAT = '%d-%m-%Y %H:%M:%S'
+LOGFORMAT = '[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s]'
+
+
+class NewLineFormatter(logging.Formatter):
+
+    def __init__(self, fmt, datefmt=None):
+        """
+        Init given the log line format and date format
+        """
+        logging.Formatter.__init__(self, fmt, datefmt)
+
+
+    def format(self, record):
+        """
+        Override format function
+        """
+        msg = logging.Formatter.format(self, record)
+
+        if record.message != "":
+            parts = msg.split(record.message)
+            msg = msg.replace('\n', '\n' + parts[0])
+
+        return msg
+
+logging.basicConfig(level=logging.DEBUG,handlers=[NewLineFormatter(LOGFORMAT, datefmt=DATEFORMAT)])
 logger = logging.getLogger(__name__)
+logger.addHandler()
 
 
 class Person(DataModel):
-    id = IntProperty(pk=True)
+    id = IntProperty(pk=True, default=auto_increment)
     city = StrProperty()
     id_card_no = StrProperty()
     name = StrProperty()
@@ -23,8 +49,8 @@ class Person(DataModel):
 class User(DataModel):
     id = IntProperty(pk=True, default=auto_increment)
     avatar = StrProperty()
-    enable = BoolProperty(default=True, targetType=boolSupportType.bit)
-    locked = BoolProperty(default=False, targetType=boolSupportType.bit)
+    enable = BoolProperty(default=True)
+    locked = BoolProperty(default=False)
     person = ForeignKey(Person, Type=ForeignType.MANY_TO_MANY)
 
 
@@ -32,10 +58,25 @@ class abc:
 
     @use_database
     async def test(self):
-        exc = Person.getAsyncExecutor()
-        user = await exc.findAllBy(Person.id == 1)
-        await exc.findForeignKey(user)
-        print(user)
+        user = User({
+            'avatar': '123123124',
+            'person': [
+                {
+                    'id': 1,
+                    'id_card_no': 'sdhu',
+                },
+                {
+                    'name': '123'
+                }
+            ]
+        })
+        res = await User.getAsyncExecutor(self).findAnyMatch(User(id=1))
+
+        await User.getAsyncExecutor(self).findForeignKey(res)
+        # res = await User.getAsyncExecutor(self).findAllBy(User.enable == True)
+        # res = await User.getAsyncExecutor(self).save(user)
+        print(res)
+
 
 
 loop = asyncio.get_event_loop()

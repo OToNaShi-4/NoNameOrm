@@ -24,6 +24,7 @@ cdef class BaseModelExecutor:
 
     def reset(self):
         self.sql = SqlGenerator().From(self.model)
+        return self
 
     cdef FilterListCell instanceToFilter(self, ModelInstance instance):
         cdef:
@@ -72,6 +73,9 @@ cdef class BaseModelExecutor:
             return instances
 
     cdef processInsert(self, int res):
+        from NonameOrm.Model.DataModel import MiddleDataModel
+        if issubclass(self.model, MiddleDataModel):
+            return
         if 'instance' in self.__dict__:
             if not self.__dict__['instance'][self.model.pkName] and res:
                 self.__dict__['instance'][self.model.pkName] = res
@@ -110,7 +114,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             if fk.Type == ForeignType.MANY_TO_MANY:
                 exc: AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
                 exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
-                instance[fk.directTarget.tableName] = await exc.findAllBy(getattr(fk.middleModel,fk.owner.tableName + '_id') == instance[fk.bindCol.name])
+                instance[fk.directTarget.tableName] = await exc.findAllBy(
+                    getattr(fk.middleModel, fk.owner.tableName + '_id') == instance[fk.bindCol.name])
             else:
                 instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
                     fk.targetBindCol == instance[fk.bindCol.name])
@@ -120,12 +125,14 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         self.sql.where(Filter)
         return self.execute()
 
-    async def save(self, instance: ModelInstance):
+    async def save(self, instance):
+        self.__dict__['instance'] = instance
+
+        if instance.get(self.model.pkName):
+            return await self.update(instance)
         cdef:
             BaseProperty cur  # 数据列指针
             list insertData = []
-
-        self.__dict__['instance'] = instance
 
         for cur in self.model.col:
             # 判断此列是否在实例内
@@ -144,20 +151,52 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         for fk in self.model.fk:
             if fk['name'] not in instance or not instance[fk['name']]:
                 continue
-            if fk['Type'] == ForeignType.ONE_TO_ONE:
-                instance[fk['name']][fk['targetBindCol'].name] = res[fk['bindCol'].name]
-                res[fk['name']] = await fk.target.getAsyncExecutor(self.work).save(instance[fk['name']])
+            elif fk['Type'] == ForeignType.ONE_TO_ONE:
+                await self._saveOTO(res, fk, instance)
                 continue
-            res[fk['name']] = []
+            elif fk.Type == ForeignType.ONE_TO_MANY:
+                await self._saveOTM(fk, instance)
+                continue
+            elif fk.Type == ForeignType.MANY_TO_MANY:
+                await self._saveMTM(fk, instance)
+                continue
+            res[fk['name']] = None if fk.Type == ForeignType else []
             for i in instance[fk['name']]:
                 res[fk['name']].append(await fk['target'].getAsyncExecutor(self.work).save(instance[fk['name']]))
         return res
 
-    async def delete(self, instance):
-        if not instance[self.model.pkName]:
-            raise DeleteWithOutPrimaryKeyError()
+    async def _saveOTO(self, res, fk, instance):
+        instance[fk['name']][fk['targetBindCol'].name] = res[fk['bindCol'].name]
+        res[fk['name']] = await fk.target.getAsyncExecutor(self.work).save(instance[fk['name']])
 
-        self.sql.delete(self.model).where(self.model.pkCol == instance[self.model.pkName])
+    async def _saveOTM(self, fk, instance):
+        exc = fk.target.getAsyncExecutor(self.work)
+        for model in instance[fk.bindCol.name]:
+            exc.reset()
+            await exc.save(model)
+
+    async def _saveMTM(self, fk, instance):
+        targetExc = fk.directTarget.getAsyncExecutor(self.work)
+        middleExc = fk.middleModel.getAsyncExecutor(self.work)
+        targetFk = fk.middleModel.getOtherFkBy(fk.owner)
+        await middleExc.delete({fk.targetBindCol.name: instance[fk.bindCol.name]},
+                                       fk.targetBindCol == instance[fk.bindCol.name])
+        for model in instance[fk.name]:
+            await targetExc.reset().save(model)
+            await middleExc.reset().save({
+                fk.targetBindCol.name: instance[fk.bindCol.name],
+                targetFk.bindCol.name: model[targetFk.targetBindCol.name]
+            })
+
+    async def delete(self, instance, filter=None):
+        print(instance)
+        if not filter and not instance[self.model.pkName]:
+            raise DeleteWithOutPrimaryKeyError()
+        self.sql.delete(self.model)
+        if filter:
+            self.sql.where(filter)
+        else:
+            self.sql.where(self.model.pkCol == instance[self.model.pkName])
         await self.execute()
 
     async def update(self, instance: ModelInstance):

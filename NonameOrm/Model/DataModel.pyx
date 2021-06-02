@@ -76,12 +76,19 @@ cdef class ModelInstance(dict):
         else:
             super().__init__()
 
+        from NonameOrm.Model.ModelProperty import ForeignType
         for k, v in object.__getattribute__(self, 'object').mapping.items():
             if k in data:
                 if isinstance(v, BaseProperty):
                     self[k] = v.toObjValue(data[k])
                 elif isinstance(v,ForeignKey):
-                    self[k] = v['target'](data[k])
+                    if v.Type == ForeignType.ONE_TO_ONE:
+                        self[k] = v['target'](data[k])
+                    elif v.Type == ForeignType.ONE_TO_MANY:
+                        self[k] = [v.target(i) for i in data[k]]
+                    elif v.Type == ForeignType.MANY_TO_MANY:
+                        self[k] = [v.directTarget(i) for i in data[k]]
+
             elif k in self:
                 self[k] = v.toObjValue(self[k])
             else:

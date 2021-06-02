@@ -3,6 +3,7 @@ from typing import Any, TypedDict, Optional
 
 from NonameOrm.Model import DataModel
 from NonameOrm.Model import FilterListCell
+from NonameOrm.Model.DataModel import MiddleDataModel
 
 
 class InsertCell(TypedDict):
@@ -98,6 +99,7 @@ class ForeignKey(dict):
     Type: ForeignType
     owner: Model.DataModel.DataModel
     targetBindCol: Optional[BaseProperty]
+    middleModel:Optional[MiddleDataModel]
     name:str
 
     def __init__(self, target, Type: ForeignType = ForeignType.ONE_TO_ONE, bindCol: Optional[BaseProperty] = None, targetBindCol: Optional[BaseProperty] = None): ...

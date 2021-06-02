@@ -8,11 +8,10 @@ def use_database(fun):
         async with DB.getInstance().connector.getCon() as self.con:
             try:
                 res = await fun(self, *args, **kwargs)
+                await self.con.commit()
+                return res
             except Exception as e:
                 await self.con.rollback()
                 raise e
-            else:
-                await self.con.commit()
-                return res
 
     return warp

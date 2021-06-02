@@ -218,7 +218,7 @@ class BoolProperty(BaseProperty):
 
     def toDBValue(self, value):
         if self.targetType == boolSupportType.tinyInt:
-            return 1 if value else 0
+            return '1' if value else '0'
         elif self.targetType == boolSupportType.varchar:
             return 'true' if value else 'false'
         elif self.targetType == boolSupportType.bit:
@@ -311,12 +311,14 @@ class ForeignKey(dict):
             bindCol=attrs[self.owner.tableName + '_id'],
             targetBindCol=self.owner.pkCol
         )
+        attrs[self.owner.tableName]['name'] = self.owner.tableName
         attrs[self.target.tableName] = ForeignKey(
             self.target,
             Type=ForeignType.ONE_TO_MANY,
             bindCol=attrs[self.target.tableName + '_id'],
             targetBindCol=self.target.pkCol
         )
+        attrs[self.target.tableName]['name'] = self.owner.tableName
 
         # 创建中间模型类
         self['middleModel'] = type(name, (MiddleDataModel,), attrs)
@@ -331,6 +333,7 @@ class ForeignKey(dict):
         )
         # 手动给目标表外键绑定所属关系
         fk['owner'] = self.target
+        fk['name'] = self.owner.tableName
 
         # 手动将外键关联添加到对象模型外键列表中
         self.target.fk.append(fk)
