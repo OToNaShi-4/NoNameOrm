@@ -26,7 +26,7 @@ class BaseProperty:
     targetType: Any
     model: DataModel
 
-    def __init__(self, name: str = None, pk: bool = False, default: Any = _null, Null: bool = True, *args, **kwargs): ...
+    def __init__(self, name: str = None, pk: bool = False, default: Any = _null, Null: bool = True, targetType: Enum = None, * args, **kwargs): ...
 
     def _init(*args, **kwargs): ...
 
@@ -86,6 +86,30 @@ class BoolProperty(BaseProperty): ...
 class JsonProperty(BaseProperty): ...
 
 
+
+class floatSupportType(Enum):
+    float = 'float'
+    decimal = 'decimal'
+
+class boolSupportType(Enum):
+    tinyInt = 'tinyint'
+    bit = 'bit'
+    varchar = 'varchar(5)'
+
+class jsonSupportType(Enum):
+    varchar = 'varchar(255)'
+    text = 'text'
+    longtext = 'longtext'
+    tinytext = 'tinytext'
+    json = 'json'
+
+class strSupportType(Enum):
+    varchar = 'varchar'
+    text = 'text'
+    longText = 'longtext'
+    tinyText = 'tinytext'
+
+
 class ForeignType(Enum):
     ONE_TO_ONE = 1
     ONE_TO_MANY = 2
@@ -99,8 +123,8 @@ class ForeignKey(dict):
     Type: ForeignType
     owner: Model.DataModel.DataModel
     targetBindCol: Optional[BaseProperty]
-    middleModel:Optional[MiddleDataModel]
-    name:str
+    middleModel: Optional[MiddleDataModel]
+    name: str
 
     def __init__(self, target, Type: ForeignType = ForeignType.ONE_TO_ONE, bindCol: Optional[BaseProperty] = None, targetBindCol: Optional[BaseProperty] = None): ...
 
@@ -109,5 +133,4 @@ class ForeignKey(dict):
     def __getattribute__(self, item: str): ...
 
     @property
-    def directTarget(self) -> Model.DataModel.DataModel:...
-
+    def directTarget(self) -> Model.DataModel.DataModel: ...

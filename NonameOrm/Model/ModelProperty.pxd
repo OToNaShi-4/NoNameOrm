@@ -17,6 +17,7 @@ cdef class BaseProperty:
     cdef public object targetType
     cdef object model
     cdef str define
+    cdef tuple typeArgs
 
     cpdef public bint sizeChecker(self, object value)
     cpdef public bint verifier(self, object value)

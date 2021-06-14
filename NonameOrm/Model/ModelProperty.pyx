@@ -61,6 +61,7 @@ cdef class BaseProperty:
                  default = _null,
                  bint Null = True,
                  str define="",
+                 tuple typeArgs=(),
                  *args, **kwargs):
 
         if name:
@@ -71,6 +72,7 @@ cdef class BaseProperty:
         self.Null = Null
         self._init(*args, **kwargs)
         self._default = default
+        self.typeArgs = typeArgs
 
     def _init(*args, **kwargs):
         pass
@@ -174,7 +176,7 @@ class IntProperty(BaseProperty):
 
 
 class strSupportType(Enum):
-    varchar = 'varchar(255)'
+    varchar = 'varchar'
     text = 'text'
     longText = 'longtext'
     tinyText = 'tinytext'
@@ -206,7 +208,7 @@ class FloatProperty(BaseProperty):
 class boolSupportType(Enum):
     tinyInt = 'tinyint'
     bit = 'bit'
-    varchar = 'varchar(5)'
+    varchar = 'varchar'
 
 
 class BoolProperty(BaseProperty):
@@ -238,18 +240,19 @@ class BoolProperty(BaseProperty):
             return value == b'\x01'
 
 
-class jsonProperty(Enum):
-    varchar = 'varchar(255)'
+class jsonSupportType(Enum):
+    varchar = 'varchar'
     text = 'text'
     longtext = 'longtext'
     tinytext = 'tinytext'
+    json = 'json'
 
 
 class JsonProperty(BaseProperty):
     Type = dict
-    SupportType: jsonProperty = jsonProperty
+    SupportType: jsonSupportType = jsonSupportType
 
-    def _init(self, targetType: jsonProperty = jsonProperty.text, *args, **kwargs):
+    def _init(self, targetType: jsonSupportType = jsonSupportType.json, *args, **kwargs):
         self.targetType = targetType
 
     def toObjValue(self, object value):

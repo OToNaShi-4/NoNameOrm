@@ -228,9 +228,11 @@ cdef class TableGenerator(BaseSqlGenerator):
         cdef:
             str sqlTemp = "CREATE TABLE " + self.model.tableName + "( \n"
             BaseProperty col
+            int index
 
-        # 生成列定义语句
-        for col in self.model.col:
+            # 生成列定义语句
+        for index in range(len(self.model.col)):
+            col = self.model.col[index]
             sqlTemp += TableGenerator.build_col(col)
 
         # 添加主键定义
@@ -246,10 +248,13 @@ cdef class TableGenerator(BaseSqlGenerator):
 
     @staticmethod
     cdef str build_col(BaseProperty col):
-        cdef str temp = "   " + col.name + " "
+        cdef:
+            str temp = "   " + col.name + " "
+            str typeArgs = str(col.typeArgs) if len(col.typeArgs) else ''
+
 
         # 数据类型
-        temp += (col.targetType.value + " ")
+        temp += (col.targetType.value + typeArgs + " ")
 
         # 是否非空
         temp += "NULL " if col.Null and not col.isPk else "NOT NULL "

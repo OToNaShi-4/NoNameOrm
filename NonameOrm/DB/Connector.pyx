@@ -6,6 +6,8 @@ from NonameOrm.Error.DBError import WriteOperateNotInAffairs
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
 import logging
 
+from aiomysql import Cursor, DictCursor
+
 _loop: asyncio.unix_events.SelectorEventLoop = asyncio.get_event_loop()
 _logger = logging.getLogger(__package__)
 
@@ -41,10 +43,10 @@ cdef class AioMysqlConnector(BaseConnector):
     async def releaseCon(self, con):
         await self._pool.release(con)
 
-    async def execute(self, str sql, con=None):
+    async def execute(self, str sql, con=None, bint dictCur=False):
         if not con:
             con = self.selectCon
-        async with con.cursor() as cur:
+        async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql)
             return await cur.fetchall()
 
