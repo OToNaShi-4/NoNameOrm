@@ -13,8 +13,8 @@ from NonameOrm.Model.ModelProperty import *
 from NonameOrm.DB.DB import DB
 from NonameOrm.DB.Connector import AioMysqlConnector
 import asyncio
-from test.Test import *
-from NonameOrm.Ext import generate_model, generate_table
+
+from NonameOrm.Ext import generate_model
 
 DATEFORMAT = '%d-%m-%Y %H:%M:%S'
 LOGFORMAT = '[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s]'
@@ -95,5 +95,5 @@ if __name__ == '__main__':
         'password': '888888'
     })).GenerateTable()
 
-    loop.run_until_complete(generate_table())
+    loop.run_until_complete(generate_model('./test/'))
     # print(Person.user)

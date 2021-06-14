@@ -7,6 +7,9 @@ from typed_ast import ast3
 import re
 from numba import jit
 
+import logging
+
+log = logging.getLogger(__package__)
 from case_convert import pascal_case
 
 typeMatcher = re.compile(r'\(.*\)')
@@ -89,11 +92,12 @@ typeMap: dict = {
 }
 
 from NonameOrm.Model.ModelProperty import *
-supportTypeMap: Dict[str, Enum] = {
+
+supportTypeMap: Dict[str, type(Enum)] = {
     'IntProperty': strSupportType,
     'FloatProperty': floatSupportType,
-    'JsonProperty': jsonProperty,
-    'StrProperty': '',
+    'JsonProperty': jsonSupportType,
+    'StrProperty': strSupportType,
 }
 
 
@@ -159,7 +163,25 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
         )
 
         # 处理字段类型
-        # if typeName :=typeMatcher.sub('', colAnnounce['Type']) in
+        try:
+            typeName = typeMatcher.sub('', colAnnounce['Type'])
+            colType = supportTypeMap[typeMap[typeName]][typeName]
+            node.keywords.append(
+                ast.keyword(
+                    arg='targetType',
+                    value=ast.Attribute(
+                        ctx=ast.Load,
+                        attr=typeName,
+                        value=ast.Name(
+                            ctx=ast.Load,
+                            id=supportTypeMap[typeMap[typeName]].__name__
+                        )
+                    )
+                )
+            )
+        except Exception:
+            log.info(f'无匹配类型{typeName},故略过')
+            pass
 
     return node
 
