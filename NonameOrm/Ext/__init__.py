@@ -1,11 +1,10 @@
 import ast
+import os
 from enum import Enum
 from typing import List, TypedDict, Tuple, Dict
 
 import astor
-from typed_ast import ast3
 import re
-from numba import jit
 
 import logging
 
@@ -35,7 +34,7 @@ async def generate_table():
         await con.rollback()
         raise e
     await con.commit()
-    await db.connector.releaseCon(con)
+    await con.close()
 
 
 class Type(Enum):
@@ -76,8 +75,6 @@ class ColAnnounce(TypedDict):
     Extra: Extra
 
 
-# from NonameOrm.Model.ModelProperty import *
-
 typeMap: dict = {
     Type.bigint.value: 'IntProperty',
     Type.int.value: 'IntProperty',
@@ -101,14 +98,15 @@ supportTypeMap: Dict[str, type(Enum)] = {
 }
 
 
-def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) -> ast3.Module:
+def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) -> ast.Module:
     # 创建AST根节点
-    module: ast3.Module = ast.Module(body=[])
+    module: ast.Module = ast.Module(body=[])
     # 创建导入节点并添加到根节点末尾
     module.body.append(ast.ImportFrom(module='NonameOrm.Model.ModelProperty', names=[ast.alias('*', None)], level=0))
-    module.body.append(ast.ImportFrom(module='NonameOrm.Model.DataModel', names=[ast.alias('DataModel', None)], level=0))
+    module.body.append(
+        ast.ImportFrom(module='NonameOrm.Model.DataModel', names=[ast.alias('DataModel', None)], level=0))
     # 创建类定义节点
-    classDefNode: ast3.ClassDef = ast.ClassDef(
+    classDefNode: ast.ClassDef = ast.ClassDef(
         bases=[ast.Name(id='DataModel', ctx=ast.Load())],
         keyword=[],
         name=pascal_case(tableName),
@@ -134,7 +132,7 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
     :param colAnnounce: 数据库列声明字典
     :return: ast.expr 节点
     """
-    node: ast3.Call = ast.Call(
+    node: ast.Call = ast.Call(
         func=ast.Name(id=typeMap[typeMatcher.sub('', colAnnounce['Type'])], ctx=ast.Load()),
         args=[],
         keywords=[]
@@ -161,11 +159,10 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
                 )
             )
         )
-
+        typeName = typeMatcher.sub('', colAnnounce['Type'])
         # 处理字段类型
         try:
-            typeName = typeMatcher.sub('', colAnnounce['Type'])
-            colType = supportTypeMap[typeMap[typeName]][typeName]
+            colType = supportTypeMap[typeMap[typeName]]
             node.keywords.append(
                 ast.keyword(
                     arg='targetType',
@@ -174,7 +171,7 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
                         attr=typeName,
                         value=ast.Name(
                             ctx=ast.Load,
-                            id=supportTypeMap[typeMap[typeName]].__name__
+                            id=colType.__name__
                         )
                     )
                 )
@@ -199,8 +196,82 @@ async def generate_model(filePath: str):
     res: Tuple[Tuple[str]] = await db.executeSql(f"SELECT TABLE_NAME FROM information_schema.`TABLES` WHERE TABLE_SCHEMA = '{dbName}';")
     for i in range(len(res)):
         tableName: str = res[i][0]
+        await _saveAstModuleByTableName(tableName, db, filePath)
+
+
+async def autoGenerate(filePath: str):
+    """
+    自动匹配本地数据模型与数据库表结构的差异，自动更新
+
+    :param filePath: 模型类文件生成路径
+    :return: void
+    """
+    from NonameOrm.DB.DB import DB
+    db = DB.getInstance()
+    dbName = db.connector.config.get('db')
+    tableTuple: Tuple[Tuple[str]] = await db.executeSql(f"SELECT TABLE_NAME FROM information_schema.`TABLES` WHERE TABLE_SCHEMA = '{dbName}';")
+    con = await db.connector.getCon()
+    pyFiles = _getAllPyFilesByPath(filePath)
+    for (tableName,) in tableTuple:
         colAnnounce: Tuple[ColAnnounce] = await db.executeSql(f'desc {tableName}', dictCur=True)
-        module: ast3.Module = tableAnnounceToAstModule(colAnnounce, tableName)
-        with open((filePath if filePath.endswith('/') else filePath + '/') + f'{pascal_case(tableName)}.py', 'w') as f:
-            sourceCode = astor.to_source(module)
-            f.write(sourceCode)
+        if pascal_case(tableName) + '.py' in pyFiles:
+            with open('', 'r') as f:
+                await _updateModelAst(ast.parse(f.read()), tableName, colAnnounce)
+        else:
+            await _saveAstModuleByTableName(tableName, colAnnounce, filePath)
+
+
+async def _updateModelAst(moduleAst: ast.Module, tableName: str, filePath: str, colAnnounceList: List[ColAnnounce]):
+    """
+    用于更新DataModel文件
+
+    :param modelAst:
+    :param tableName:
+    :param filePath:
+    :return:
+    """
+    colAssignMap: Dict[str:ast.Assign] = _getColAssignFromAstModule(moduleAst)
+    for colAnnounce in colAnnounceList:
+        if colAnnounce['Field'] in colAssignMap:
+            del colAssignMap[colAnnounce['Field']]
+            continue
+
+    with open((filePath if filePath.endswith('/') else filePath + '/') + f'{pascal_case(tableName)}.py', '+') as f:
+        sourceCode = astor.to_source(moduleAst)
+        f.write(sourceCode)
+
+
+async def _saveAstModuleByTableName(tableName: str, colAnnounce, filePath):
+    """
+    根据数据库表名自动分析并生成对应的NonameOrm模型文件
+
+    :param tableName: 数据库表名
+    :param db: 数据库实例
+    :param filePath: 模型文件生成路径
+    :return: void
+    """
+    module: ast.Module = tableAnnounceToAstModule(colAnnounce, tableName)
+    with open((filePath if filePath.endswith('/') else filePath + '/') + f'{pascal_case(tableName)}.py', '+') as f:
+        sourceCode = astor.to_source(module)
+        f.write(sourceCode)
+
+
+def _getColAssignFromAstModule(module: ast.Module) -> Dict[str, ast.Assign]:
+    colAssignMap: Dict[str, ast.Assign] = dict()
+    for node in ast.walk(module):
+        if isinstance(node, ast.Assign) and node.targets[0].id.endswith('Property'):
+            colAssignMap[node.targets[0].id] = node
+    return colAssignMap
+
+
+def _getAllPyFilesByPath(path: str) -> List[str]:
+    """
+    获取指定路径下所有python文件名
+
+    :param path: 系统路径
+    :return: List[str]
+    """
+    pyFiles = []
+    for i, j, k in os.walk(path):
+        pyFiles.extend([file for file in k if file.endswith('.py')])
+    return pyFiles

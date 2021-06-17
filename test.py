@@ -3,7 +3,7 @@ import logging
 import time
 from typing import TypedDict
 
-from typed_ast import ast3
+
 import ast
 import astor
 from NonameOrm.DB.Generator import SqlGenerator
@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 #     enable = BoolProperty(default=True)
 #     locked = BoolProperty(default=False)
 #     person = ForeignKey(Person, Type=ForeignType.MANY_TO_MANY)
+
+
 
 
 code = """
@@ -70,8 +72,8 @@ class ColAnnounce(TypedDict):
     Default: str
 
 
-def generatorModel() -> ast3.Module:
-    module: ast3.Module = ast.Module(body=[])
+def generatorModel() -> ast.Module:
+    module: ast.Module = ast.Module(body=[])
     module.body.append(ast.ImportFrom(module='NonameOrm.Model.ModelProperty', names=[ast.alias('*', None)], level=0))
     module.body.append(ast.ImportFrom(module='NonameOrm.Model.DataModel', names=[ast.alias('DataModel', None)], level=0))
     return module
@@ -86,14 +88,16 @@ async def main():
 
 
 if __name__ == '__main__':
-    DB.create(connector=AioMysqlConnector(**{
-        'host': '127.0.0.1',
-        'port': 3306,
-        'db': 'test_db',
-        'user': 'root',
-        # 'password': '123456'
-        'password': '888888'
-    })).GenerateTable()
-
-    loop.run_until_complete(generate_model('./test/'))
-    # print(Person.user)
+    # DB.create(connector=AioMysqlConnector(**{
+    #     'host': '127.0.0.1',
+    #     'port': 3306,
+    #     'db': 'test_db',
+    #     'user': 'root',
+    #     # 'password': '123456'
+    #     'password': '888888'
+    # })).GenerateTable()
+    #
+    # loop.run_until_complete(generate_model('./test/'))
+    # # print(Person.user)
+    a = __import__('test.Test')
+    print(a.Test())

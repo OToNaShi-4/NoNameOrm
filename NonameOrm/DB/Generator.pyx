@@ -1,5 +1,6 @@
 # cython_ext: language_level=3
 # cython: c_string_type=unicode, c_string_encoding=utf8
+import ast
 from typing import List
 
 from NonameOrm.Error.SqlError import *
@@ -275,3 +276,10 @@ cdef _processValue(object data):
     if isinstance(data, bytes):
         return '1' if data == b'\x01' else '0'
     return data
+
+cdef str BuildAlterColSql(str tableName, assignNode: ast.Assign):
+    cdef:
+        str colName = assignNode.targets[0].id
+        str
+    return "ALTER TABLE " + tableName + "\n    add " + colName
+
