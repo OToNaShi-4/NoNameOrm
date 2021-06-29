@@ -4,7 +4,7 @@ import ast
 from typing import List
 
 from NonameOrm.Error.SqlError import *
-from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell
+from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell, NullDefault
 from NonameOrm.Model.ModelProperty cimport Relationship
 from NonameOrm.Model.ModelProperty cimport AutoIncrement
 
@@ -34,6 +34,13 @@ cdef class JoinCell:
 cdef class BaseSqlGenerator:
     cdef public tuple Build(self):
         return ()
+
+cdef class CustomColAnnounce(BaseSqlGenerator):
+    def __init__(self, str announce):
+        self.announce = announce
+
+    cdef public tuple Build(self):
+        return self.announce, None
 
 cdef class SqlGenerator(BaseSqlGenerator):
     def __init__(self):
@@ -156,7 +163,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
         for cur in self.updateCol:
             updateTemp += cur['name'] + " = %s,"
-            params.append(str(cur['value']))
+            params.append(cur['value'])
 
         whereTemp, whereParams = self.build_where()
         return updateTemp[:-1] + whereTemp + ";", params + whereParams
@@ -218,7 +225,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         if cur.col:
             return cur.col.model.tableName + "." + cur.value + " " + relationshipMap.get(cur.relationship, '')
         else:
-            params.append(str(cur.value))
+            params.append(cur.value)
             return " %s " + relationshipMap.get(cur.relationship, '')
 
 cdef class TableGenerator(BaseSqlGenerator):
@@ -251,26 +258,36 @@ cdef class TableGenerator(BaseSqlGenerator):
     cdef str build_col(BaseProperty col):
         cdef:
             str temp = "   " + col.name + " "
-            str typeArgs = str(col.typeArgs) if len(col.typeArgs) else ''
+            str typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
+
 
 
         # 数据类型
-        temp += (col.targetType.value + typeArgs + " ")
+        temp += (col.targetType + typeArgs + " ")
 
         # 是否非空
         temp += "NULL " if col.Null and not col.isPk else "NOT NULL "
 
         # 是否主键
         if col.isPk:
-
-            temp += "AUTO_INCREMENT " if col._default == AutoIncrement else ""
+            temp += buildDefault(col)
         else:
-            temp += ("DEFAULT " + _processValue(col.toDBValue(col.Default))) if col.hasDefault else ""
+            temp += ("DEFAULT " + buildDefault(col)) if col.hasDefault else ""
 
         # 额外定义
         temp += col.define + ",\n"
 
         return temp
+
+cdef str buildDefault(BaseProperty col):
+    if isinstance(col._default, BaseSqlGenerator):
+        return (<BaseSqlGenerator>col._default).Build()[0]
+    elif col._default == AutoIncrement:
+        return "AUTO_INCREMENT"
+    elif isinstance(col._default, NullDefault) or col._default is NullDefault:
+        return ''
+    else:
+        return _processValue(col.toDBValue(col._default))
 
 cdef _processValue(object data):
     if isinstance(data, bytes):
@@ -282,4 +299,3 @@ cdef str BuildAlterColSql(str tableName, assignNode: ast.Assign):
         str colName = assignNode.targets[0].id
         str
     return "ALTER TABLE " + tableName + "\n    add " + colName
-

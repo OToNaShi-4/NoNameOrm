@@ -8,6 +8,8 @@ from enum import Enum
 from NonameOrm.Error.PropertyError import PropertyVerifyError, PrimaryKeyOverLimitError, PropertyUsageError, \
     ForeignKeyDependError
 
+from NonameOrm.DB.Generator cimport CustomColAnnounce
+
 cdef class NullDefault:
     pass
 
@@ -15,7 +17,12 @@ cdef class AutoIncrement:
     pass
 
 cdef NullDefault _null = NullDefault()
+
 auto_increment = AutoIncrement
+
+current_timestamp = CustomColAnnounce("current_timestamp")
+current_date = CustomColAnnounce("current_date")
+
 
 cdef class FilterListCell:
     def __init__(self, cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
@@ -151,7 +158,7 @@ cdef class BaseProperty:
 
     @property
     def Default(self):
-        return None if isinstance(self._default, NullDefault) or self._default == AutoIncrement else self._default
+        return buildDefault(self)
 
     @property
     def dbName(self) -> str:
@@ -161,6 +168,19 @@ cdef class BaseProperty:
     def objName(self) -> str:
         return self.name
 
+    @property
+    def targetType(self):
+        return self._targetType.value
+
+cdef str buildDefault(BaseProperty col):
+    if isinstance(col._default, CustomColAnnounce):
+        return None
+    elif col._default == AutoIncrement:
+        return None
+    elif isinstance(col._default, NullDefault) or col._default is NullDefault:
+        return None
+    else:
+        return col.toDBValue(col._default)
 
 class intSupportType(Enum):
     Int = 'int'
@@ -172,7 +192,7 @@ class IntProperty(BaseProperty):
     supportType: intSupportType = intSupportType
 
     def _init(self, targetType: intSupportType = intSupportType.Int, *args, **kwargs):
-        self.targetType = targetType
+        self._targetType = targetType
 
 
 class strSupportType(Enum):
@@ -187,7 +207,9 @@ class StrProperty(BaseProperty):
     supportType: strSupportType = strSupportType
 
     def _init(self, targetType: strSupportType = strSupportType.varchar, *args, **kwargs):
-        self.targetType = targetType
+        self._targetType = targetType
+        if not self.typeArgs:
+            self.typeArgs = (255,)
 
 
 class floatSupportType(Enum):
@@ -201,7 +223,7 @@ class FloatProperty(BaseProperty):
     size: tuple
 
     def _init(self, targetType: floatSupportType = floatSupportType.float, tuple size = None, *args, **kwargs):
-        self.targetType = targetType
+        self._targetType = targetType
         self.size = size
 
 
@@ -216,29 +238,46 @@ class BoolProperty(BaseProperty):
     SupportType: boolSupportType = boolSupportType
 
     def _init(self, targetType: boolSupportType = boolSupportType.tinyInt, *args, **kwargs):
-        self.targetType = targetType
+        self._targetType = targetType
 
     def toDBValue(self, value):
-        if self.targetType == boolSupportType.tinyInt:
+        if self._targetType == boolSupportType.tinyInt:
             return '1' if value else '0'
-        elif self.targetType == boolSupportType.varchar:
+        elif self._targetType == boolSupportType.varchar:
             return 'true' if value else 'false'
-        elif self.targetType == boolSupportType.bit:
+        elif self._targetType == boolSupportType.bit:
             return b'\x01' if value else b'\x00'
 
     def toObjValue(self, object value) -> bool:
         if isinstance(value, bool):
             return value
-        if self.targetType == boolSupportType.tinyInt:
+        if self._targetType == boolSupportType.tinyInt:
             return bool(value)
-        elif self.targetType == boolSupportType.varchar:
+        elif self._targetType == boolSupportType.varchar:
             if value == 'True' or value == 'true' or value == '1':
                 return True
             else:
                 return False
-        elif self.targetType == boolSupportType.bit:
+        elif self._targetType == boolSupportType.bit:
             return value == b'\x01'
 
+class timestampSupportType(Enum):
+    varchar = 'varchar(25)'
+    timestamp = 'timestamp'
+    datetime = 'datetime'
+
+class TimestampProperty(BaseProperty):
+    SupportType: timestampSupportType = timestampSupportType
+    Type = str
+
+    def _init(self, targetType: timestampSupportType = timestampSupportType.timestamp, *args, **kwargs):
+        self._targetType = targetType
+
+    def toDBValue(self, value):
+        return value
+
+    def toObjValue(self, value):
+        return value
 
 class jsonSupportType(Enum):
     varchar = 'varchar'
@@ -253,7 +292,7 @@ class JsonProperty(BaseProperty):
     SupportType: jsonSupportType = jsonSupportType
 
     def _init(self, targetType: jsonSupportType = jsonSupportType.json, *args, **kwargs):
-        self.targetType = targetType
+        self._targetType = targetType
 
     def toObjValue(self, object value):
         if isinstance(value, dict) or isinstance(value, list):

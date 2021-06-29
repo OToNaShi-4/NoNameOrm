@@ -4,7 +4,6 @@ from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
 from NonameOrm.Model.ModelProperty import ForeignKey
 from .ModelProperty cimport *
-
 cdef str get_lower_case_name(str text):
     text = text.replace('Model', '')
     cdef list lst = []
@@ -59,6 +58,15 @@ class _DataModelMeta(type):
 
 
 cdef class ModelInstance(dict):
+    """
+    模型实例基类
+    其子类会在DataModel被创建之时自动创建并继承此类
+    本类及其子类需要通过实例化模型类时实例化
+
+    本类继承自字典《dict》实例拥有字典的所有能力
+    遇到
+    """
+
     def __init__(self, *args, **kwargs):
         cdef:
             str k
@@ -70,35 +78,40 @@ cdef class ModelInstance(dict):
                 super().__init__(args[0])
             elif isinstance(args[0], dict):
                 data = args[0]
-                super().__init__()
+                if kwargs.get('check',True):
+                    super().__init__()
             else:
                 super().__init__()
         else:
             super().__init__()
 
-        from NonameOrm.Model.ModelProperty import ForeignType
-        for k, v in object.__getattribute__(self, 'object').mapping.items():
-            if k in data:
-                if isinstance(v, BaseProperty):
-                    self[k] = v.toObjValue(data[k])
-                elif isinstance(v,ForeignKey):
-                    if v.Type == ForeignType.ONE_TO_ONE:
-                        self[k] = v['target'](data[k])
-                    elif v.Type == ForeignType.ONE_TO_MANY:
-                        self[k] = [v.target(i) for i in data[k]]
-                    elif v.Type == ForeignType.MANY_TO_MANY:
-                        self[k] = [v.directTarget(i) for i in data[k]]
 
-            elif k in self:
-                self[k] = v.toObjValue(self[k])
-            else:
-                self[v.name] = v.Default
+        if kwargs.get('check',True):
+
+            from NonameOrm.Model.ModelProperty import ForeignType
+            for k, v in object.__getattribute__(self, 'object').mapping.items():
+                if k in data:
+                    if isinstance(v, BaseProperty):
+                        self[k] = v.toObjValue(data[k])
+                    elif isinstance(v, ForeignKey):
+                        if v.Type == ForeignType.ONE_TO_ONE:
+                            self[k] = v['target'](data[k])
+                        elif v.Type == ForeignType.ONE_TO_MANY:
+                            self[k] = [v.target(i) for i in data[k]]
+                        elif v.Type == ForeignType.MANY_TO_MANY:
+                            self[k] = [v.directTarget(i) for i in data[k]]
+
+                elif k in self:
+                    self[k] = v.toObjValue(self[k])
+                else:
+                    self[v.name] = v.Default
+        else:
+            super().__init__(data)
 
     def __getattribute__(self, str name):
-        item = object.__getattribute__(self, 'get')(name)
-        if item:
-            return item
-        else:
+        try:
+            return self[name]
+        except Exception:
             return object.__getattribute__(self, name)
 
     def __setattr__(self, key, value):
@@ -108,10 +121,25 @@ cdef class ModelInstance(dict):
         raise KeyError()
 
 cdef class InstanceList(list):
-    pass
+    """
+    实例列表，内部只有一种对象，就是模型实例的实例
+    """
+
+    cdef int len(self):
+        return len(self)
 
 
 class DataModel(_DataModel, metaclass=_DataModelMeta):
+    """
+    本类为无实例类，无法实例化
+    在调用本类的实例化方法时，将会创建本类相对应的模型实例类的实例即
+
+    isinstance(DataModel(), DataModel) -> False
+    isinstance(DataModel(), ModelInstance) -> True
+
+    模型实例类 与 模型类 与 模型实例之间的关系需要注意
+    """
+
     _db: Type[DB] = DB
     pkName: Optional[str] = None
     pkCol: Optional[BaseProperty] = None
@@ -131,9 +159,9 @@ class MiddleDataModel(DataModel):
         pass
 
     @classmethod
-    def getOtherModelBy(cls, model:DataModel) -> DataModel:
+    def getOtherModelBy(cls, model: DataModel) -> DataModel:
         return cls.getOtherFkBy(model).target
 
     @classmethod
-    def getOtherFkBy(cls,model) -> ForeignKey:
+    def getOtherFkBy(cls, model) -> ForeignKey:
         return cls.fk[0] if cls.fk[0].target is not model else cls.fk[1]

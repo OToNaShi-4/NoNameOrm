@@ -1,4 +1,8 @@
 # cython_ext: language_level=3
+from NonameOrm.DB.Generator cimport CustomColAnnounce
+
+
+
 
 
 
@@ -14,10 +18,10 @@ cdef class BaseProperty:
     cdef public bint isPk
     cdef public bint Null
     cdef public object _default
-    cdef public object targetType
+    cdef public object _targetType
     cdef object model
     cdef str define
-    cdef tuple typeArgs
+    cdef public tuple typeArgs
 
     cpdef public bint sizeChecker(self, object value)
     cpdef public bint verifier(self, object value)

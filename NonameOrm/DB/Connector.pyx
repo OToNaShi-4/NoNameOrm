@@ -29,7 +29,6 @@ cdef class AioMysqlConnector(BaseConnector):
     async def _init_mysql(self, *args, **kwargs) -> None:
         import aiomysql
         pool = await aiomysql.create_pool(*args, **kwargs)
-        self.selectCon = await pool.acquire()
         return pool
 
     @property
@@ -38,14 +37,37 @@ cdef class AioMysqlConnector(BaseConnector):
 
     @property
     def getCon(self):
+        """
+        获取链接实例
+
+        :return:
+        """
         return self._pool.acquire
 
-    async def releaseCon(self, con):
-        await self._pool.release(con)
+    async def getSelectCon(self):
+        if self.selectCon and self.count > 7:
+            await self.selectCon.commit()
+            self._pool.release(self.selectCon)
+            self.selectCon = await self._pool.acquire()
+            self.count = 0
+        else:
+            self.selectCon = await self._pool.acquire()
+            self.count = 0
+        self.count += 1
+        return self.selectCon
+
+    def releaseCon(self, con):
+        """
+        释放链接实例
+
+        :param con: 数据库链接实例
+        :return:
+        """
+        self._pool.release(con)
 
     async def execute(self, str sql, con=None, bint dictCur=False):
         if not con:
-            con = self.selectCon
+            con = await self.getSelectCon()
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql)
             return await cur.fetchall()
@@ -67,8 +89,8 @@ cdef class AioMysqlConnector(BaseConnector):
             object res
             str sqlTemp
             list data
-        con = kwargs.get('con') if 'con' in kwargs else self.selectCon
-        async with con.cursor() as cur:
+        con = kwargs.get('con') if 'con' in kwargs else await self.getSelectCon()
+        async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
             _logger.info(sqlTemp % tuple(data))
             await cur.execute(sqlTemp, data)

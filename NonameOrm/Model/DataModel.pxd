@@ -8,6 +8,7 @@ cdef class _DataModel:
     cdef public str tableName
 
 cdef class InstanceList(list):
+    cdef int len(self)
     pass
 
 cdef class ModelInstance(dict):

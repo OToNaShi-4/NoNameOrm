@@ -8,8 +8,8 @@ import re
 
 import logging
 
-log = logging.getLogger(__package__)
 from case_convert import pascal_case
+log = logging.getLogger(__package__)
 
 typeMatcher = re.compile(r'\(.*\)')
 
@@ -34,7 +34,7 @@ async def generate_table():
         await con.rollback()
         raise e
     await con.commit()
-    await con.close()
+    con.close()
 
 
 class Type(Enum):
@@ -257,6 +257,12 @@ async def _saveAstModuleByTableName(tableName: str, colAnnounce, filePath):
 
 
 def _getColAssignFromAstModule(module: ast.Module) -> Dict[str, ast.Assign]:
+    """
+    从
+
+    :param module:
+    :return:
+    """
     colAssignMap: Dict[str, ast.Assign] = dict()
     for node in ast.walk(module):
         if isinstance(node, ast.Assign) and node.targets[0].id.endswith('Property'):

@@ -58,19 +58,14 @@ cdef class BaseModelExecutor:
     def execute(self):
         pass
 
-    cdef object processSelect(self, tuple res):
+    cdef InstanceList processSelect(self, list res):
         cdef:
             BaseProperty col
-            list select = [col.name for col in self.sql.selectCol]
-            InstanceList instances
+            InstanceList instances = InstanceList()
             int i
-        if len(res) == 1:
-            return self.model(zip(select, res[0]))
-        else:
-            instances = InstanceList()
-            for i in range(len(res)):
-                instances.append(self.model(zip(select, res[0])))
-            return instances
+        for i in range(len(res)):
+            instances.append(self.model(res[i],check=False))
+        return instances
 
     cdef processInsert(self, int res):
         from NonameOrm.Model.DataModel import MiddleDataModel
@@ -109,16 +104,80 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         self.sql.select(*cols)
         return self
 
-    async def findForeignKey(self, instance, deep=False):
+
+    async def findListForeignKey(self, InstanceList instances, bint deep=False, dict path = {}, int clevel=1, int level=3,str before=None):
+        cdef int i
+        for i in range(len(instances)):
+            await self.findForeignKey(instances[i], deep=True, path=path, clevel=clevel, level=level)
+
+    async def findForeignKey(self, ModelInstance instance, bint deep=False, dict path = {}, int clevel=1, int level=3,str before=None):
+
+        cdef:
+            InstanceList res
+            ModelInstance ins
+            int i
+
+        if deep and clevel == 1:
+            # 若当前为深查找入口时将当前实例放入路径内
+            path[self.model.tableName] = {instance[self.model.pkName]: instance}
+        elif deep and not clevel == 1:
+            # 若当前非深查找入口，则增加深度
+            clevel += 1
+            if clevel > level:
+                # 检查当前深度
+                return
+
         for fk in self.model.fk:
+            # 循环查找
             if fk.Type == ForeignType.MANY_TO_MANY:
-                exc: AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
-                exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
-                instance[fk.directTarget.tableName] = await exc.findAllBy(
-                    getattr(fk.middleModel, fk.owner.tableName + '_id') == instance[fk.bindCol.name])
+                if before == fk.directTarget.tableName:
+                    continue
+                # 若外键类型为多对多
+                if fk.directTarget.tableName in path and instance[fk.bindCol.name] in path[fk.directTarget.tableName]:
+                    # 查看当前外键关联下是否有已查询过的内容，有则直接返回
+                    instance[fk.name] = path[fk.directTarget.tableName][instance[fk.bindCol.name]]
+                else:
+                    # 通过join中间表查询目标外键表
+                    exc: AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
+                    exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
+                    instance[fk.name] = await exc.findAllBy(
+                        getattr(fk.middleModel, fk.owner.tableName + '_id') == instance[fk.bindCol.name])
+
+                    # 将当前结果添加进路径
+                    if fk.directTarget.tableName in path:
+                        path[fk.directTarget.tableName][instance[fk.bindCol.name]] = instance[fk.name]
+                    else:
+                        path[fk.directTarget.tableName] = {instance[fk.bindCol.name]: instance}
+
+                if deep and len(instance[fk.name]):
+                    # 深查找
+                    exc: AsyncModelExecutor = instance[fk.name][0].object.getAsyncExecutor()
+                    for i in range(len(instance[fk.name])):
+                        ins = instance[fk.name][i]
+                        await exc.findForeignKey(ins, deep=True, path=path, clevel=clevel, level=level,before=self.model.tableName)
             else:
-                instance[fk.name] = await fk.target.getAsyncExecutor().findAllBy(
-                    fk.targetBindCol == instance[fk.bindCol.name])
+                if before == fk.target.tableName:
+                    continue
+                if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName]:
+                    res = path[fk.target.tableName][instance[fk.bindCol.name]]
+                else:
+                    res = await fk.target.getAsyncExecutor().findAllBy(
+                        fk.targetBindCol == instance[fk.bindCol.name])
+                if res and fk.Type == ForeignType.ONE_TO_ONE and res.len():
+                    # 若为一对一关系则直接取结果集中的第一项作为数据放入实例
+                    instance[fk.name] = res[0]
+                    if deep:
+                        await instance[fk.name].object.getAsyncExecutor().findForeignKey(instance[fk.name], deep=True, path=path, clevel=clevel, level=level,before=self.model.tableName)
+
+                elif res and fk.Type == ForeignType.ONE_TO_MANY:
+                    # 若为一对多关系，则直将结果集作为数据放入实例
+                    exc: AsyncModelExecutor = res[0].object.getAsyncExecutor()
+                    instance[fk.name] = res
+                    if deep:
+                        for i in range(len(res)):
+                            await exc.findForeignKey(res[i], deep=True, path=path, clevel=clevel, level=level)
+
+
         return instance
 
     async def By(self, FilterListCell Filter = None):
@@ -180,7 +239,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         middleExc = fk.middleModel.getAsyncExecutor(self.work)
         targetFk = fk.middleModel.getOtherFkBy(fk.owner)
         await middleExc.delete({fk.targetBindCol.name: instance[fk.bindCol.name]},
-                                       fk.targetBindCol == instance[fk.bindCol.name])
+                               fk.targetBindCol == instance[fk.bindCol.name])
         for model in instance[fk.name]:
             await targetExc.reset().save(model)
             await middleExc.reset().save({
@@ -189,7 +248,6 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             })
 
     async def delete(self, instance, filter=None):
-        print(instance)
         if not filter and not instance[self.model.pkName]:
             raise DeleteWithOutPrimaryKeyError()
         self.sql.delete(self.model)

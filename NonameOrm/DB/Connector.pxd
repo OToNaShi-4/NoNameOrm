@@ -4,11 +4,12 @@ cdef enum ConnectorType:
 
 cdef class BaseConnector:
     cdef:
-        object _pool
+        public object _pool
         ConnectorType Type
         bint isAsync
         object selectCon
         public dict _config
+        int count
 
 cdef class AioMysqlConnector(BaseConnector):
     pass

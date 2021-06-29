@@ -3,6 +3,8 @@
 from NonameOrm.DB.DB cimport DB
 from NonameOrm.DB.Generator cimport SqlGenerator
 from NonameOrm.Model.DataModel cimport ModelInstance
+
+from NonameOrm.Model.DataModel cimport InstanceList
 from .ModelProperty cimport *
 
 cdef class BaseModelExecutor:
@@ -16,7 +18,7 @@ cdef class BaseModelExecutor:
 
     cdef FilterListCell instanceToFilter(self, ModelInstance instance)
     cdef process(self, object res)
-    cdef object processSelect(self, tuple res)
+    cdef InstanceList processSelect(self, list res)
     cdef processInsert(self, int res)
 
 

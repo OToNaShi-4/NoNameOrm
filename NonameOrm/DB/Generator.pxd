@@ -17,6 +17,12 @@ cdef class BaseSqlGenerator:
     cdef  sqlType currentType
     cdef public tuple Build(self)
 
+cdef class CustomColAnnounce(BaseSqlGenerator):
+
+    cdef str announce
+
+    cdef public tuple Build(self)
+
 cdef class SqlGenerator(BaseSqlGenerator):
     cdef  list selectCol
     cdef  FilterListCell whereCol

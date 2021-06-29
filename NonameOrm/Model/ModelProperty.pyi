@@ -1,9 +1,15 @@
 from enum import Enum
 from typing import Any, TypedDict, Optional
 
+from NonameOrm.DB.Generator import CustomColAnnounce
+from NonameOrm.Model.ModelProperty import FilterListCell
+
 from NonameOrm.Model import DataModel
-from NonameOrm.Model import FilterListCell
 from NonameOrm.Model.DataModel import MiddleDataModel
+
+
+current_timestamp = CustomColAnnounce("current_timestamp")
+current_date = CustomColAnnounce("current_date")
 
 
 class InsertCell(TypedDict):
@@ -26,7 +32,14 @@ class BaseProperty:
     targetType: Any
     model: DataModel
 
-    def __init__(self, name: str = None, pk: bool = False, default: Any = _null, Null: bool = True, targetType: Enum = None, * args, **kwargs): ...
+    def __init__(self,
+                 name: str = None,
+                 pk: bool = False,
+                 default: Any = _null,
+                 Null: bool = True,
+                 typeArgs: tuple = (),
+                 targetType: Enum = None,
+                 *args, **kwargs): ...
 
     def _init(*args, **kwargs): ...
 
@@ -86,15 +99,25 @@ class BoolProperty(BaseProperty): ...
 class JsonProperty(BaseProperty): ...
 
 
+class TimestampProperty(BaseProperty): ...
+
+
+class timestampSupportType(Enum):
+    varchar = 'varchar(25)'
+    timestamp = 'timestamp'
+    datetime = 'datetime'
+
 
 class floatSupportType(Enum):
     float = 'float'
     decimal = 'decimal'
 
+
 class boolSupportType(Enum):
     tinyInt = 'tinyint'
     bit = 'bit'
     varchar = 'varchar(5)'
+
 
 class jsonSupportType(Enum):
     varchar = 'varchar(255)'
@@ -102,6 +125,7 @@ class jsonSupportType(Enum):
     longtext = 'longtext'
     tinytext = 'tinytext'
     json = 'json'
+
 
 class strSupportType(Enum):
     varchar = 'varchar'
