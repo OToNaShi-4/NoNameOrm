@@ -9,7 +9,8 @@ class JoinCell:
 
 
 class BaseSqlGenerator:
-     def Build(self):...
+    def Build(self): ...
+
 
 class SqlGenerator(BaseSqlGenerator):
     selectCol: List[BaseProperty]
@@ -47,6 +48,11 @@ class SqlGenerator(BaseSqlGenerator):
 
 
 class TableGenerator(BaseSqlGenerator):
-    model:DataModel
+    model: DataModel
 
-    def Build(self):...
+    def Build(self): ...
+
+
+class CustomColAnnounce(BaseSqlGenerator):
+    def __init__(self, sql: str): ...
+

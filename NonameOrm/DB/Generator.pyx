@@ -26,6 +26,8 @@ cdef dict joinTypeMap = {
     INNER_JOIN: "INNER JOIN ",
 }
 
+
+
 cdef class JoinCell:
     def __init__(self, fk, JoinType joinType = JoinType.JOIN):
         self.Type = joinType
@@ -73,7 +75,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         self.currentType = sqlType.DELETE
         return self
 
-    cdef public SqlGenerator update(self, object target):
+    cpdef public SqlGenerator update(self, object target):
         self.currentType = sqlType.UPDATE
         self.From(target)
         return self
@@ -113,6 +115,10 @@ cdef class SqlGenerator(BaseSqlGenerator):
         self.limit = "limit %i %i" % (count, offset)
         return self
 
+    def orderBy(self,*args):
+        self.orderList = args
+        pass
+
     def join(self, object foreignKey, joinType: JoinType = JoinType.JOIN) -> SqlGenerator:
         self.joinList.append(JoinCell(foreignKey, joinType))
         return self
@@ -131,7 +137,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
             str whereTemp
             list params
 
-        whereTemp, params = self.build_where()
+        whereTemp, params = SqlGenerator.build_where(self.whereCol)
 
         return "DELETE FROM " + self.target + " " + whereTemp, params
 
@@ -165,10 +171,38 @@ cdef class SqlGenerator(BaseSqlGenerator):
             updateTemp += cur['name'] + " = %s,"
             params.append(cur['value'])
 
-        whereTemp, whereParams = self.build_where()
+        whereTemp, whereParams = SqlGenerator.build_where(self.whereCol)
         return updateTemp[:-1] + whereTemp + ";", params + whereParams
+    
+    @staticmethod
+    cdef str build_order(tuple orderList):
+        """
+        生成 orderBy 子句
+        
+        :return: orderBy 子句内容 
+        """
+        if not orderList or len(orderList):
+            return ""
+
+        cdef:
+            int i
+            int length = len(orderList)
+            str orderTemp = "order by "
+
+
+        for i in range(length):
+            orderTemp += orderList[i]
+            if not i == length-1:
+                orderTemp += ", "
+
+        return orderTemp
 
     cdef tuple build_select(self):
+        """
+        生成select子句
+        
+        :return: select 子句 
+        """
         cdef:
             BaseProperty Property
             str whereTemp
@@ -177,12 +211,12 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
         selectTemp += ",".join(
             [f"{Property.model.tableName}.{Property.name}" for Property in self.selectCol if Property])
-        whereTemp, params = self.build_where()
+        whereTemp, params = SqlGenerator.build_where(self.whereCol)
 
         if self.joinList and len(self.joinList):
-            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + ";", params
+            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", params
         else:
-            return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + ";", params
+            return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", params
 
     cdef str build_join(self):
         cdef:
@@ -196,13 +230,14 @@ cdef class SqlGenerator(BaseSqlGenerator):
                         foreignKey.target.tableName + "." + foreignKey.targetBindCol.name + "\n"
         return joinTemp
 
-    cdef tuple build_where(self):
+    @staticmethod
+    cdef tuple build_where(FilterListCell whereCol):
         cdef str whereTemp = " WHERE "
         cdef list params = []
 
-        if not self.whereCol:
+        if not whereCol:
             return '', params
-        cdef FilterListCell cur = self.whereCol
+        cdef FilterListCell cur = whereCol
         if not cur.next:
             raise SqlInStanceError()
         while True:

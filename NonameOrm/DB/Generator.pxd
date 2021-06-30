@@ -31,14 +31,18 @@ cdef class SqlGenerator(BaseSqlGenerator):
     cdef:
         list updateCol
         list _joinList
+        tuple orderList
 
-    cdef public SqlGenerator update(self, object target)
+    cpdef public SqlGenerator update(self, object target)
     cpdef public SqlGenerator From(self, object target)
     cpdef public tuple Build(self)
     cdef tuple build_update(self)
     cdef tuple build_select(self)
-    cdef tuple build_where(self)
+    @staticmethod
+    cdef tuple build_where(FilterListCell whereCol)
     cdef tuple build_insert(self)
+    @staticmethod
+    cdef str build_order(tuple orderList)
     cdef tuple build_delete(self)
     @staticmethod
     cdef str _getWhereCellStr(FilterListCell cur, list params)

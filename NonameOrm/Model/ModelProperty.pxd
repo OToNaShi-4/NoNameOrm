@@ -25,6 +25,8 @@ cdef class BaseProperty:
 
     cpdef public bint sizeChecker(self, object value)
     cpdef public bint verifier(self, object value)
+    cdef public str desc(self)
+    cdef public str asc(self)
 
     cdef FilterListCell setFilter(self, object other, Relationship relationship)
 

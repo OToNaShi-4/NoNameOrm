@@ -126,6 +126,12 @@ cdef class BaseProperty:
     def toObjValue(self, value):
         return value
 
+    cdef public str desc(self):
+        return f"{self.model.tableName}.{self.name} DESC"
+
+    cdef public str asc(self):
+        return f"{self.model.tableName}.{self.name} ASC"
+
     def __eq__(self, other) -> FilterListCell:
         return self.setFilter(other, EQUAL)
 

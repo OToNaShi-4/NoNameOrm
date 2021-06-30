@@ -46,13 +46,13 @@ cdef class AioMysqlConnector(BaseConnector):
 
     async def getSelectCon(self):
         if self.selectCon and self.count > 7:
-            await self.selectCon.commit()
-            self._pool.release(self.selectCon)
+            await self._pool.release(self.selectCon)
             self.selectCon = await self._pool.acquire()
             self.count = 0
-        else:
+        elif not self.selectCon:
             self.selectCon = await self._pool.acquire()
             self.count = 0
+        await self.selectCon.commit()
         self.count += 1
         return self.selectCon
 

@@ -73,23 +73,21 @@ cdef class ModelInstance(dict):
             cdef dict data = kwargs
 
 
+
         if len(args):
             if isinstance(args[0], zip):
                 super().__init__(args[0])
             elif isinstance(args[0], dict):
-                data = args[0]
+                data = <dict>args[0]
                 if kwargs.get('check',True):
                     super().__init__()
             else:
                 super().__init__()
-        else:
             super().__init__()
 
-
         if kwargs.get('check',True):
-
             from NonameOrm.Model.ModelProperty import ForeignType
-            for k, v in object.__getattribute__(self, 'object').mapping.items():
+            for k, v in self.object.mapping.items():
                 if k in data:
                     if isinstance(v, BaseProperty):
                         self[k] = v.toObjValue(data[k])
@@ -100,7 +98,6 @@ cdef class ModelInstance(dict):
                             self[k] = [v.target(i) for i in data[k]]
                         elif v.Type == ForeignType.MANY_TO_MANY:
                             self[k] = [v.directTarget(i) for i in data[k]]
-
                 elif k in self:
                     self[k] = v.toObjValue(self[k])
                 else:
@@ -115,7 +112,7 @@ cdef class ModelInstance(dict):
             return object.__getattribute__(self, name)
 
     def __setattr__(self, key, value):
-        if key in object.__getattribute__(self, 'dataModel').mapping:
+        if key in self.object.mapping:
             self[key] = value
             return
         raise KeyError()

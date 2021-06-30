@@ -42,6 +42,7 @@ class abc:
         return instance
 
 
+
 loop = asyncio.get_event_loop()
 
 
@@ -60,4 +61,4 @@ if __name__ == '__main__':
         'password': '888888'
     })).GenerateTable()
 
-    loop.run_until_complete(main())
+    # loop.run_until_complete(main())

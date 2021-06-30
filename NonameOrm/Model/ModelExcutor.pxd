@@ -11,10 +11,11 @@ cdef class BaseModelExecutor:
 
     cdef:
         object model
-        SqlGenerator sql
+        public SqlGenerator sql
         object work
         DB db
         dict __dict__
+        bint executed
 
     cdef FilterListCell instanceToFilter(self, ModelInstance instance)
     cdef process(self, object res)
