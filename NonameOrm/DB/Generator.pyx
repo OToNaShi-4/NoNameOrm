@@ -112,7 +112,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
             return self.build_delete()
 
     def Limit(self, int count, int offset) -> SqlGenerator:
-        self.limit = "limit %i %i" % (count, offset)
+        self.limit = "limit %i, %i" % (offset, count)
         return self
 
     def orderBy(self,*args):

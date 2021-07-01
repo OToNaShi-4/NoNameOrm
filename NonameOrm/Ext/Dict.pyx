@@ -6,17 +6,16 @@ cdef class DictPlus(dict):
     def __getattribute__(self, item):
         try:
             return self[item]
-        except AttributeError:
+        except Exception:
             return object.__getattribute__(self, item)
 
     def __getattr__(self, item):
         try:
             return self[item]
-        except AttributeError:
+        except Exception:
             return object.__getattribute__(self, item)
 
     def __setattr__(self, key, value):
-        self[key] = value
+        self.__setitem__(key,value)
 
-    def __setitem__(self, key, value):
-        self[key] = value
+

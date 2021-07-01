@@ -7,7 +7,6 @@ from NonameOrm.Model.ModelProperty import FilterListCell
 from NonameOrm.Model import DataModel
 from NonameOrm.Model.DataModel import MiddleDataModel
 
-
 current_timestamp = CustomColAnnounce("current_timestamp")
 current_date = CustomColAnnounce("current_date")
 
@@ -54,6 +53,10 @@ class BaseProperty:
     def updateCell(self, value) -> InsertCell: ...
 
     def toDBValue(self, value) -> Any: ...
+
+    def desc(self) -> str: ...
+
+    def asc(self) -> str: ...
 
     def toObjValue(self, value): ...
 
