@@ -111,7 +111,7 @@ cdef class BaseProperty:
     def insertCell(self, value):
         return {
             'col': self,
-            'value': self.toDBValue(value)
+            'value': value
         }
 
     def updateCell(self, value):

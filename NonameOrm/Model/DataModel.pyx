@@ -4,6 +4,7 @@ from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
 from NonameOrm.Model.ModelProperty import ForeignKey
 from .ModelProperty cimport *
+
 cdef str get_lower_case_name(str text):
     text = text.replace('Model', '')
     cdef list lst = []
@@ -78,32 +79,32 @@ cdef class ModelInstance(dict):
             if isinstance(args[0], zip):
                 super().__init__(args[0])
             elif isinstance(args[0], dict):
-                data = <dict>args[0]
-                if kwargs.get('check',True):
+                data = <dict> args[0]
+                if kwargs.get('check', True):
                     super().__init__()
             else:
                 super().__init__()
-            super().__init__()
 
-        if kwargs.get('check',True):
-            from NonameOrm.Model.ModelProperty import ForeignType
-            for k, v in self.object.mapping.items():
-                if k in data:
-                    if isinstance(v, BaseProperty):
-                        self[k] = v.toObjValue(data[k])
-                    elif isinstance(v, ForeignKey):
-                        if v.Type == ForeignType.ONE_TO_ONE:
-                            self[k] = v['target'](data[k])
-                        elif v.Type == ForeignType.ONE_TO_MANY:
-                            self[k] = [v.target(i) for i in data[k]]
-                        elif v.Type == ForeignType.MANY_TO_MANY:
-                            self[k] = [v.directTarget(i) for i in data[k]]
-                elif k in self:
-                    self[k] = v.toObjValue(self[k])
-                else:
-                    self[v.name] = v.Default
-        else:
-            super().__init__(data)
+        from NonameOrm.Model.ModelProperty import ForeignType
+        for k, v in self.object.mapping.items():
+            if k in data:
+                if isinstance(v, ForeignKey):
+                    if v.Type == ForeignType.ONE_TO_ONE:
+                        self[k] = v.target(data[k], check=kwargs.get('check', True))
+                    elif v.Type == ForeignType.ONE_TO_MANY:
+                        self[k] = [v.target(i, check=kwargs.get('check', True)) for i in data[k]]
+                    elif v.Type == ForeignType.MANY_TO_MANY:
+                        self[k] = [v.directTarget(i, check=kwargs.get('check', True)) for i in data[k]]
+                elif not kwargs.get('check', True):
+                    self[k] = data[k]
+                elif isinstance(v, BaseProperty):
+                    self[k] = v.toObjValue(data[k])
+            elif not kwargs.get('check', True):
+                continue
+            elif k in self:
+                self[k] = v.toObjValue(self[k])
+            else:
+                self[v.name] = v.Default
 
     def __getattribute__(self, str name):
         try:

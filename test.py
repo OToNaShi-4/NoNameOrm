@@ -1,11 +1,8 @@
-import json
 import logging
 
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty import *
-from NonameOrm.DB.DB import DB
-from NonameOrm.DB.Connector import AioMysqlConnector
 import asyncio
 from faker import Faker
 
@@ -15,6 +12,22 @@ fake = Faker(loacale='zh_CN')
 
 logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
+
+
+class Person(DataModel):
+    id = IntProperty(pk=True, Null=False)
+    real_name = StrProperty(typeArgs=(8,), Null=False)
+    id_card = StrProperty(typeArgs=(24,), Null=False)
+    phone = StrProperty(typeArgs=(16,))
+    addr = StrProperty(typeArgs=(60,))
+    gender = BoolProperty(default=False, Null=False)
+    birth_day = TimestampProperty()
+    nation = StrProperty(typeArgs=(10,))
+    student_id = StrProperty(typeArgs=(18,))
+    student_class = StrProperty(typeArgs=(18,))
+    specialized_subject = StrProperty(typeArgs=(14,))
+    academy = StrProperty(typeArgs=(10,))
+    position = StrProperty(typeArgs=(10,))
 
 
 class User(DataModel):
@@ -27,6 +40,7 @@ class User(DataModel):
     create_time = StrProperty(typeArgs=(255,))
     update_time = StrProperty(typeArgs=(255,))
     is_delete = BoolProperty(default=False)
+    person = ForeignKey(Person)
 
 
 class abc:
@@ -44,12 +58,13 @@ async def main():
     print(res)
 
 if __name__ == '__main__':
-    DB.create(connector=AioMysqlConnector(**{
-            'host'    : '127.0.0.1',
-            'port'    : 3306,
-            'db'      : 'test',
-            'user'    : 'root',
-            'password': '888888'
-    })).GenerateTable()
+    # DB.create(connector=AioMysqlConnector(**{
+    #         'host'    : '127.0.0.1',
+    #         'port'    : 3306,
+    #         'db'      : 'test',
+    #         'user'    : 'root',
+    #         'password': '888888'
+    # })).GenerateTable()
 
-    loop.run_until_complete(main())
+    # loop.run_until_complete(main())
+    pass

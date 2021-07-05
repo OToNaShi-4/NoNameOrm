@@ -32,6 +32,10 @@ cdef class BaseModelExecutor:
         self.sql = SqlGenerator().From(self.model)
         return self
 
+    def editSql(self, callback):
+        callback(self.sql)
+        return self
+
     cdef FilterListCell instanceToFilter(self, ModelInstance instance):
         cdef:
             int i
@@ -171,7 +175,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                 if before == fk.target.tableName:
                     continue
                 if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName]:
-                    res = path[fk.target.tableName][instance[fk.bindCol.name]]
+                    temp = path[fk.target.tableName][instance[fk.bindCol.name]]
+                    res = temp if isinstance(temp,InstanceList) else InstanceList([temp])
                 else:
                     res = await fk.target.getAsyncExecutor().findAllBy(
                             fk.targetBindCol == instance[fk.bindCol.name])
