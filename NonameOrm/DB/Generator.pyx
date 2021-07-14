@@ -329,7 +329,7 @@ cdef _processValue(object data):
         return '1' if data == b'\x01' else '0'
     if isinstance(data, str):
         return "'"+data+"'"
-    return data
+    return str(data)
 
 cdef str BuildAlterColSql(str tableName, assignNode: ast.Assign):
     cdef:

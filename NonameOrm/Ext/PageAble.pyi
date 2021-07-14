@@ -34,7 +34,7 @@ class PageAble:
     本类支持链式调用
     """
 
-    def __init__(self, target: DataModel, page: Optional[int] = 1, pageSize: Optional[int] = 10, findForeign: Optional[bool] = False):
+    def __init__(self, target: Type[DataModel], page: Optional[int] = 1, pageSize: Optional[int] = 10, findForeign: Optional[bool] = False):
         """
 
         :param target:

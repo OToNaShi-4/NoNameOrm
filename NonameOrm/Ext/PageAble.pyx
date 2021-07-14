@@ -30,7 +30,7 @@ cdef class PageAble:
     本类支持链式调用
     """
 
-    def __init__(self, target: DataModel, int page=1, int pageSize=10, bint findForeign=False):
+    def __init__(self, target, int page=1, int pageSize=10, bint findForeign=False):
         """
 
         :param target:
