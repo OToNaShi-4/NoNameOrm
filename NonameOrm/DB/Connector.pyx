@@ -45,16 +45,7 @@ cdef class AioMysqlConnector(BaseConnector):
         return self._pool.acquire
 
     async def getSelectCon(self):
-        if self.selectCon and self.count > 7:
-            await self._pool.release(self.selectCon)
-            self.selectCon = await self._pool.acquire()
-            self.count = 0
-        elif not self.selectCon:
-            self.selectCon = await self._pool.acquire()
-            self.count = 0
-        await self.selectCon.commit()
-        self.count += 1
-        return self.selectCon
+        return await self._pool.acquire()
 
     def releaseCon(self, con):
         """
@@ -63,14 +54,22 @@ cdef class AioMysqlConnector(BaseConnector):
         :param con: 数据库链接实例
         :return:
         """
-        self._pool.release(con)
+        return self._pool.release(con)
 
     async def execute(self, str sql, con=None, bint dictCur=False):
+        cdef bint userSelectCon = False
         if not con:
+            userSelectCon = True
             con = await self.getSelectCon()
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql)
-            return await cur.fetchall()
+            res = await cur.fetchall()
+
+        if userSelectCon:
+            await con.commit()
+            self.releaseCon(con)
+
+        return res
 
     async def asyncProcess(self, *args, **kwargs):
         # 获取异步执行对象
@@ -89,7 +88,14 @@ cdef class AioMysqlConnector(BaseConnector):
             object res
             str sqlTemp
             list data
-        con = kwargs.get('con') if 'con' in kwargs else await self.getSelectCon()
+            bint useSelectCon = False
+
+        if 'con' in kwargs:
+            con = kwargs.get('con')
+        else:
+            useSelectCon = True
+            con = await self.getSelectCon()
+
         async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
             _logger.info(sqlTemp % tuple(data))
@@ -98,5 +104,10 @@ cdef class AioMysqlConnector(BaseConnector):
                 res = await cur.fetchall()
             else:
                 res = cur.lastrowid
+
+        if useSelectCon:
+            await con.commit()
+            self.releaseCon(con)
         # 处理查询结果
         return executor.process(res)
+

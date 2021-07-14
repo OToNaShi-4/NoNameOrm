@@ -1,3 +1,5 @@
+from asyncio import Task
+
 from aiomysql import Connection
 
 
@@ -17,7 +19,7 @@ class AioMysqlConnector(BaseConnector):
 
     async def getCon(self) -> Connection: ...
 
-    async def releaseCon(self, con: Connection) -> None: ...
+    def releaseCon(self, con: Connection) -> Task: ...
 
     async def execute(self, sql: str, con: Connection = None): ...
 

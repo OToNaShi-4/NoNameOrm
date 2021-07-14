@@ -144,14 +144,15 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
         for fk in self.model.fk:
             # 循环查找
+            if before == fk.directTarget.tableName:
+                continue
             if fk.Type == ForeignType.MANY_TO_MANY:
-                if before == fk.directTarget.tableName:
-                    continue
                 # 若外键类型为多对多
                 if fk.directTarget.tableName in path and instance[fk.bindCol.name] in path[fk.directTarget.tableName]:
                     # 查看当前外键关联下是否有已查询过的内容，有则直接返回
                     logging.info(f'当前外键{fk.name}已经查询过')
                     instance[fk.name] = path[fk.directTarget.tableName][instance[fk.bindCol.name]]
+                    continue
                 else:
                     # 通过join中间表查询目标外键表
                     exc: AsyncModelExecutor = fk.directTarget.getAsyncExecutor()
@@ -172,27 +173,26 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                         ins = instance[fk.name][i]
                         await exc.findForeignKey(ins, deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
             else:
-                if before == fk.target.tableName:
-                    continue
                 if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName]:
-                    temp = path[fk.target.tableName][instance[fk.bindCol.name]]
-                    res = temp if isinstance(temp,InstanceList) else InstanceList([temp])
+                    instance[fk.name] = path[fk.target.tableName][instance[fk.bindCol.name]]
+                    continue
                 else:
                     res = await fk.target.getAsyncExecutor().findAllBy(
                             fk.targetBindCol == instance[fk.bindCol.name])
-                if res and fk.Type == ForeignType.ONE_TO_ONE and res.len():
-                    # 若为一对一关系则直接取结果集中的第一项作为数据放入实例
-                    instance[fk.name] = res[0]
-                    if deep:
-                        await instance[fk.name].object.getAsyncExecutor().findForeignKey(instance[fk.name], deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
+                    if res and fk.Type == ForeignType.ONE_TO_ONE and res.len():
+                        # 若为一对一关系则直接取结果集中的第一项作为数据放入实例
 
-                elif res and fk.Type == ForeignType.ONE_TO_MANY:
-                    # 若为一对多关系，则直将结果集作为数据放入实例
-                    exc: AsyncModelExecutor = res[0].object.getAsyncExecutor()
-                    instance[fk.name] = res
-                    if deep:
-                        for i in range(len(res)):
-                            await exc.findForeignKey(res[i], deep=True, path=path, clevel=clevel, level=level)
+                        instance[fk.name] = res[0]
+                        if deep:
+                            await instance[fk.name].object.getAsyncExecutor().findForeignKey(instance[fk.name], deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
+
+                    elif res and fk.Type == ForeignType.ONE_TO_MANY:
+                        # 若为一对多关系，则直将结果集作为数据放入实例
+                        exc: AsyncModelExecutor = res[0].object.getAsyncExecutor()
+                        instance[fk.name] = res
+                        if deep:
+                            for i in range(len(res)):
+                                await exc.findForeignKey(res[i], deep=True, path=path, clevel=clevel, level=level)
 
         return instance
 
@@ -259,8 +259,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         await middleExc.delete({fk.targetBindCol.name: instance[fk.bindCol.name]},
                                fk.targetBindCol == instance[fk.bindCol.name])
         for model in instance[fk.name]:
-            await targetExc.reset().save(model)
-            await middleExc.reset().save({
+            # await targetExc.save(model)
+            await middleExc.save({
                     fk.targetBindCol.name: instance[fk.bindCol.name],
                     targetFk.bindCol.name: model[targetFk.targetBindCol.name]
             })
@@ -276,6 +276,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         await self.execute()
 
     async def update(self, instance: ModelInstance):
+        print(instance)
         if not instance[self.model.pkName]:
             raise UpdateWithOutPrimaryKeyError()
 

@@ -88,7 +88,7 @@ cdef class ModelInstance(dict):
         from NonameOrm.Model.ModelProperty import ForeignType
         for k, v in self.object.mapping.items():
             if k in data:
-                if isinstance(v, ForeignKey):
+                if isinstance(v, ForeignKey) and data[k] is not None:
                     if v.Type == ForeignType.ONE_TO_ONE:
                         self[k] = v.target(data[k], check=kwargs.get('check', True))
                     elif v.Type == ForeignType.ONE_TO_MANY:
