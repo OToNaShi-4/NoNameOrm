@@ -170,7 +170,6 @@ cdef class SqlGenerator(BaseSqlGenerator):
         for cur in self.updateCol:
             updateTemp += cur['name'] + " = %s,"
             params.append(cur['value'])
-
         whereTemp, whereParams = SqlGenerator.build_where(self.whereCol)
         return updateTemp[:-1] + whereTemp + ";", params + whereParams
     

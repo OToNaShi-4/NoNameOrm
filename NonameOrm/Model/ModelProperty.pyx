@@ -23,7 +23,6 @@ auto_increment = AutoIncrement
 current_timestamp = CustomColAnnounce("current_timestamp")
 current_date = CustomColAnnounce("current_date")
 
-
 cdef class FilterListCell:
     def __init__(self, cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
         if <str> cell == '':
@@ -36,8 +35,8 @@ cdef class FilterListCell:
     cpdef FilterListCell append(self, FilterListCell cell, Relationship relationship):
         if self.next:
             return self.next.append(cell, relationship)
-        if self.col and not cell.col:
-            cell.value = self.col.toDBValue(cell.value)
+        # if self.col and not cell.col:
+        #     cell.value = self.col.toDBValue(cell.value)
         self.next = cell
         self.relationship = relationship
         return self
@@ -117,11 +116,11 @@ cdef class BaseProperty:
     def updateCell(self, value):
         return {
             'name': self.name,
-            'value': self.toDBValue(value)
+            'value': value
         }
 
     def toDBValue(self, value):
-        return value if value is not None else 'null'
+        return value
 
     def toObjValue(self, value):
         return value
@@ -178,7 +177,7 @@ cdef class BaseProperty:
     def targetType(self):
         return self._targetType.value
 
-cdef str buildDefault(BaseProperty col):
+cdef object buildDefault(BaseProperty col):
     if isinstance(col._default, CustomColAnnounce):
         return None
     elif col._default == AutoIncrement:
@@ -187,6 +186,7 @@ cdef str buildDefault(BaseProperty col):
         return None
     else:
         return col.toDBValue(col._default)
+
 
 class intSupportType(Enum):
     Int = 'int'
@@ -232,6 +232,11 @@ class FloatProperty(BaseProperty):
         self._targetType = targetType
         self.size = size
 
+    def toObjValue(self, value):
+        if value is None or value == 'null':
+            return None
+        return round(float(value), self.typeArgs[1])
+
 
 class boolSupportType(Enum):
     tinyInt = 'tinyint'
@@ -248,13 +253,14 @@ class BoolProperty(BaseProperty):
 
     def toDBValue(self, value):
         if self._targetType == boolSupportType.tinyInt:
-            return '1' if value else '0'
+            return 1 if value else 0
         elif self._targetType == boolSupportType.varchar:
             return 'true' if value else 'false'
         elif self._targetType == boolSupportType.bit:
             return b'\x01' if value else b'\x00'
 
     def toObjValue(self, object value) -> bool:
+
         if isinstance(value, bool):
             return value
         if self._targetType == boolSupportType.tinyInt:
@@ -267,10 +273,12 @@ class BoolProperty(BaseProperty):
         elif self._targetType == boolSupportType.bit:
             return value == b'\x01'
 
+
 class timestampSupportType(Enum):
     varchar = 'varchar(25)'
     timestamp = 'timestamp'
     datetime = 'datetime'
+
 
 class TimestampProperty(BaseProperty):
     SupportType: timestampSupportType = timestampSupportType
@@ -284,6 +292,7 @@ class TimestampProperty(BaseProperty):
 
     def toObjValue(self, value):
         return value
+
 
 class jsonSupportType(Enum):
     varchar = 'varchar'
@@ -388,7 +397,6 @@ class ForeignKey(dict):
 
         # 手动为对象模型添加外键属性
         setattr(self.target, self.owner.tableName, fk)
-
 
         # 更改本外键指向
         self['target'] = self['middleModel']

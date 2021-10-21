@@ -98,7 +98,7 @@ cdef class AioMysqlConnector(BaseConnector):
 
         async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
-            _logger.info(sqlTemp % tuple(data))
+            _logger.debug(sqlTemp % tuple(data))
             await cur.execute(sqlTemp, data)
             if sql.currentType != sqlType.INSERT:
                 res = await cur.fetchall()

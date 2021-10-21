@@ -104,7 +104,7 @@ cdef class ModelInstance(dict):
             elif k in self:
                 self[k] = v.toObjValue(self[k])
             else:
-                self[v.name] = v.Default
+                self[v.name] = v.toObjValue(v.Default)
 
     def __getattribute__(self, str name):
         try:

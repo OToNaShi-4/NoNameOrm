@@ -47,7 +47,8 @@ class abc:
 
     @use_database
     async def test(self):
-        return await PageAble(User).filter(User.is_delete == False).execute()
+        User.getAsyncExecutor().findAnyMatch(User(id=1))
+        return await PageAble(User).filter((User.is_delete == False) & (User.nickname == 'aksjdklasd')).execute()
 
 
 loop = asyncio.get_event_loop()

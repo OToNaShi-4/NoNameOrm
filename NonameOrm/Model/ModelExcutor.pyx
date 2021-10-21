@@ -74,7 +74,7 @@ cdef class BaseModelExecutor:
             InstanceList instances = InstanceList()
             int i
         for i in range(len(res)):
-            instances.append(self.model(res[i], check=False))
+            instances.append(self.model(res[i]))
         return instances
 
     cdef processInsert(self, int res):
@@ -276,7 +276,6 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         await self.execute()
 
     async def update(self, instance: ModelInstance):
-        print(instance)
         if not instance[self.model.pkName]:
             raise UpdateWithOutPrimaryKeyError()
 

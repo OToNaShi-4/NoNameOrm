@@ -52,6 +52,8 @@ class Type(Enum):
     longtext = 'longtext'
     tinyint = 'tinyint'
     tinytext = 'tinytext'
+    bit = 'bit'
+
 
 
 class Null(Enum):
@@ -78,25 +80,30 @@ class ColAnnounce(TypedDict):
 
 
 typeMap: dict = {
-    Type.bigint.value  : 'IntProperty',
-    Type.int.value     : 'IntProperty',
-    Type.decimal.value : 'FloatProperty',
-    Type.json.value    : 'JsonProperty',
-    Type.float.value   : 'FloatProperty',
-    Type.text.value    : 'StrProperty',
+    Type.bigint.value: 'IntProperty',
+    Type.int.value: 'IntProperty',
+    Type.decimal.value: 'FloatProperty',
+    Type.json.value: 'JsonProperty',
+    Type.float.value: 'FloatProperty',
+    Type.text.value: 'StrProperty',
     Type.longtext.value: 'StrProperty',
-    Type.tinyint.value : 'IntProperty',
+    Type.tinyint.value: 'IntProperty',
     Type.tinytext.value: 'StrProperty',
-    Type.varchar.value : 'StrProperty'
+    Type.varchar.value: 'StrProperty',
+    Type.bit.value: 'BoolProperty',
+    Type.timestamp.value: 'TimestampProperty',
+    Type.datetime.value: 'TimestampProperty'
 }
 
 from NonameOrm.Model.ModelProperty import *
 
 supportTypeMap: Dict[str, type(Enum)] = {
-    'IntProperty'  : strSupportType,
+    'IntProperty': strSupportType,
     'FloatProperty': floatSupportType,
-    'JsonProperty' : jsonSupportType,
-    'StrProperty'  : strSupportType,
+    'JsonProperty': jsonSupportType,
+    'StrProperty': strSupportType,
+    'BoolProperty': boolSupportType,
+    'TimestampProperty': timestampSupportType
 }
 
 
@@ -106,14 +113,15 @@ def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) ->
     # 创建导入节点并添加到根节点末尾
     module.body.append(ast.ImportFrom(module='NonameOrm.Model.ModelProperty', names=[ast.alias('*', None)], level=0))
     module.body.append(
-            ast.ImportFrom(module='NonameOrm.Model.DataModel', names=[ast.alias('DataModel', None)], level=0))
+        ast.ImportFrom(module='NonameOrm.Model.DataModel', names=[ast.alias('DataModel', None)], level=0))
+
     # 创建类定义节点
     classDefNode: ast.ClassDef = ast.ClassDef(
-            bases=[ast.Name(id='DataModel', ctx=ast.Load())],
-            keyword=[],
-            name=pascal_case(tableName),
-            body=[colAnnounceToAstNode(col) for col in colAnnounce],
-            decorator_list=[]
+        bases=[ast.Name(id='DataModel', ctx=ast.Load())],
+        keyword=[],
+        name=pascal_case(tableName),
+        body=[colAnnounceToAstNode(col) for col in colAnnounce],
+        decorator_list=[]
     )
     module.body.append(classDefNode)
     return module
@@ -121,9 +129,9 @@ def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) ->
 
 def colAnnounceToAstNode(colAnnounce: ColAnnounce) -> ast.stmt:
     return ast.Assign(
-            targets=[ast.Name(id=colAnnounce['Field'], ctx=ast.Store)],
-            value=_getColValueNode(colAnnounce),
-            type_comment=''
+        targets=[ast.Name(id=colAnnounce['Field'], ctx=ast.Store)],
+        value=_getColValueNode(colAnnounce),
+        type_comment=''
     )
 
 
@@ -135,9 +143,9 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
     :return: ast.expr 节点
     """
     node: ast.Call = ast.Call(
-            func=ast.Name(id=typeMap[typeMatcher.sub('', colAnnounce['Type'])], ctx=ast.Load()),
-            args=[],
-            keywords=[]
+        func=ast.Name(id=typeMap[typeMatcher.sub('', colAnnounce['Type'])], ctx=ast.Load()),
+        args=[],
+        keywords=[]
     )
     if colAnnounce['Key'] == Key.PRI.value:
         # 添加主键声明参数
@@ -154,30 +162,30 @@ def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
     if typeArgs:
         # 判断是否有类型参数，有则添加类型参数节点
         node.keywords.append(
-                ast.keyword(
-                        arg='typeArgs',
-                        value=ast.Tuple(
-                                ctx=ast.Load,
-                                elts=[ast.Constant(value=x) for i in typeArgs for x in re.findall(r'\d+', i)]
-                        )
+            ast.keyword(
+                arg='typeArgs',
+                value=ast.Tuple(
+                    ctx=ast.Load,
+                    elts=[ast.Constant(value=x) for i in typeArgs for x in re.findall(r'\d+', i)]
                 )
+            )
         )
         typeName = typeMatcher.sub('', colAnnounce['Type'])
         # 处理字段类型
         try:
             colType = supportTypeMap[typeMap[typeName]]
             node.keywords.append(
-                    ast.keyword(
-                            arg='targetType',
-                            value=ast.Attribute(
-                                    ctx=ast.Load,
-                                    attr=typeName,
-                                    value=ast.Name(
-                                            ctx=ast.Load,
-                                            id=colType.__name__
-                                    )
-                            )
+                ast.keyword(
+                    arg='targetType',
+                    value=ast.Attribute(
+                        ctx=ast.Load,
+                        attr=typeName,
+                        value=ast.Name(
+                            ctx=ast.Load,
+                            id=colType.__name__
+                        )
                     )
+                )
             )
         except Exception:
             log.info(f'无匹配类型{typeName},故略过')
@@ -200,7 +208,8 @@ async def generate_model(filePath: str):
     res: Tuple[Tuple[str]] = await db.executeSql(f"SELECT TABLE_NAME FROM information_schema.`TABLES` WHERE TABLE_SCHEMA = '{dbName}';")
     for i in range(len(res)):
         tableName: str = res[i][0]
-        await _saveAstModuleByTableName(tableName, db, filePath)
+        colAnnounce: Tuple[ColAnnounce] = await db.executeSql(f'desc {tableName}', dictCur=True)
+        await _saveAstModuleByTableName(tableName, colAnnounce, filePath)
 
 
 async def autoGenerate(filePath: str):
@@ -223,6 +232,7 @@ async def autoGenerate(filePath: str):
             with open('', 'r') as f:
                 await _updateModelAst(ast.parse(f.read()), tableName, colAnnounce)
         else:
+
             await _saveAstModuleByTableName(tableName, colAnnounce, filePath)
 
 
@@ -256,7 +266,7 @@ async def _saveAstModuleByTableName(tableName: str, colAnnounce, filePath):
     :return: void
     """
     module: ast.Module = tableAnnounceToAstModule(colAnnounce, tableName)
-    with open((filePath if filePath.endswith('/') else filePath + '/') + f'{pascal_case(tableName)}.py', '+') as f:
+    with open((filePath if filePath.endswith('/') else filePath + '/') + f'{pascal_case(tableName)}.py', 'w') as f:
         sourceCode = astor.to_source(module)
         f.write(sourceCode)
 
