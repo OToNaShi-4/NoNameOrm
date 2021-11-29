@@ -1,5 +1,7 @@
 import logging
 
+from NonameOrm.DB.Connector import AioMysqlConnector
+from NonameOrm.DB.DB import DB
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty import *
@@ -59,13 +61,13 @@ async def main():
     print(res)
 
 if __name__ == '__main__':
-    # DB.create(connector=AioMysqlConnector(**{
-    #         'host'    : '127.0.0.1',
-    #         'port'    : 3306,
-    #         'db'      : 'test',
-    #         'user'    : 'root',
-    #         'password': '888888'
-    # })).GenerateTable()
+    DB.create(connector=AioMysqlConnector(**{
+            'host'    : 'localhost',
+            'port'    : 3306,
+            'db'      : 'test',
+            'user'    : 'root',
+            'password': '123456'
+    })).GenerateTable()
 
-    # loop.run_until_complete(main())
+    loop.run_until_complete(main())
     pass

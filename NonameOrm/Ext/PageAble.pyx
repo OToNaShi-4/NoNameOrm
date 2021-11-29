@@ -85,7 +85,7 @@ cdef class PageAble:
             list args
         sqlTemp, args = SqlGenerator.build_where(self.executor.sql.whereCol)
         cdef tuple res = await DB.getInstance() \
-            .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}" % tuple(args))
+            .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}", args=tuple(args))
         return res[0][0]
 
     async def execute(self):

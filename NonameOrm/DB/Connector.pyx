@@ -56,13 +56,14 @@ cdef class AioMysqlConnector(BaseConnector):
         """
         return self._pool.release(con)
 
-    async def execute(self, str sql, con=None, bint dictCur=False):
+    async def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
         cdef bint userSelectCon = False
         if not con:
             userSelectCon = True
             con = await self.getSelectCon()
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
-            await cur.execute(sql)
+            _logger.debug(sql)
+            await cur.execute(sql, args)
             res = await cur.fetchall()
 
         if userSelectCon:

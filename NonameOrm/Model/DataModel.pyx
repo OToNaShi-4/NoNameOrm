@@ -103,6 +103,8 @@ cdef class ModelInstance(dict):
                 continue
             elif k in self:
                 self[k] = v.toObjValue(self[k])
+            elif isinstance(v, ForeignKey):
+                continue
             else:
                 self[v.name] = v.toObjValue(v.Default)
 
