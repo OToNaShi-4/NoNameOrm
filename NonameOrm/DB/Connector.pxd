@@ -12,4 +12,14 @@ cdef class BaseConnector:
         int count
 
 cdef class AioMysqlConnector(BaseConnector):
+    cdef :
+        object loop
     pass
+
+
+cdef class AioSqliteConnector(BaseConnector):
+    cdef:
+        object loop
+        object con
+        bint isUsing
+

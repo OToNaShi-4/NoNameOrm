@@ -1,12 +1,18 @@
 import logging
 
-from NonameOrm.DB.Connector import AioMysqlConnector
+import faker
+
+from NonameOrm.DB.Connector import AioMysqlConnector, AioSqliteConnector
 from NonameOrm.DB.DB import DB
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty import *
 import asyncio
 from faker import Faker
+
+loop = asyncio.new_event_loop()
+
+asyncio.set_event_loop(loop)
 
 from NonameOrm.Ext.PageAble import PageAble
 
@@ -47,27 +53,27 @@ class User(DataModel):
 
 class abc:
 
-    @use_database
     async def test(self):
-        User.getAsyncExecutor().findAnyMatch(User(id=1))
-        return await PageAble(User).filter((User.is_delete == False) & (User.nickname == 'aksjdklasd')).execute()
+        name = fake.name()
+        await User.getAsyncExecutor().save(User(
+            username = name,
+            nickname=fake.name(),
+            password = fake.name(),
+            email = fake.ascii_email()
+        ))
 
+        res = await User.getAsyncExecutor().findAllBy(User.username == name)
+        print(res)
 
-loop = asyncio.get_event_loop()
 
 
 async def main():
     res = await abc().test()
     print(res)
 
+
 if __name__ == '__main__':
-    DB.create(connector=AioMysqlConnector(**{
-            'host'    : 'localhost',
-            'port'    : 3306,
-            'db'      : 'test',
-            'user'    : 'root',
-            'password': '123456'
-    })).GenerateTable()
+    DB.create(connector=AioSqliteConnector(loop=loop, path=':memory:')).GenerateTable()
 
     loop.run_until_complete(main())
     pass

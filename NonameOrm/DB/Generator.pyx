@@ -26,8 +26,6 @@ cdef dict joinTypeMap = {
     INNER_JOIN: "INNER JOIN ",
 }
 
-
-
 cdef class JoinCell:
     def __init__(self, fk, JoinType joinType = JoinType.JOIN):
         self.Type = joinType
@@ -115,7 +113,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         self.limit = "limit %i, %i" % (offset, count)
         return self
 
-    def orderBy(self,*args):
+    def orderBy(self, *args):
         self.orderList = args
         pass
 
@@ -139,7 +137,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
         whereTemp, params = SqlGenerator.build_where(self.whereCol)
 
-        return "DELETE FROM " + self.target + " " + whereTemp, params
+        return "DELETE FROM " + self.target + " " + whereTemp, tuple(params)
 
     cdef tuple build_insert(self):
         cdef:
@@ -157,7 +155,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         # 拼接完整sql语句
         insertTemp += "(" + ",".join(cols) + ") values (" + ",".join(['%s' for i in range(len(params))]) + ');'
 
-        return insertTemp, params
+        return insertTemp, tuple(params)
 
     cdef tuple build_update(self):
         cdef:
@@ -171,8 +169,8 @@ cdef class SqlGenerator(BaseSqlGenerator):
             updateTemp += cur['name'] + " = %s,"
             params.append(cur['value'])
         whereTemp, whereParams = SqlGenerator.build_where(self.whereCol)
-        return updateTemp[:-1] + whereTemp + ";", params + whereParams
-    
+        return updateTemp[:-1] + whereTemp + ";", tuple(params + whereParams)
+
     @staticmethod
     cdef str build_order(tuple orderList):
         """
@@ -191,7 +189,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
         for i in range(length):
             orderTemp += orderList[i]
-            if not i == length-1:
+            if not i == length - 1:
                 orderTemp += ", "
 
         return orderTemp
@@ -213,9 +211,9 @@ cdef class SqlGenerator(BaseSqlGenerator):
         whereTemp, params = SqlGenerator.build_where(self.whereCol)
 
         if self.joinList and len(self.joinList):
-            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", params
+            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", tuple(params)
         else:
-            return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", params
+            return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", tuple(params)
 
     cdef str build_join(self):
         cdef:
@@ -284,7 +282,7 @@ cdef class TableGenerator(BaseSqlGenerator):
         # 收尾
         if sqlTemp.endswith(',\n'):
             sqlTemp = sqlTemp[:-2] + '\n'
-        sqlTemp += ") ENGINE=InnoDB DEFAULT CHARSET=UTF8MB4;"
+        sqlTemp += ") ;"
         print(sqlTemp)
         return sqlTemp,
 
@@ -295,17 +293,14 @@ cdef class TableGenerator(BaseSqlGenerator):
             str typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
 
 
-
-        # 数据类型
-        temp += (col.targetType + typeArgs + " ")
-
-        # 是否非空
-        temp += "NULL " if col.Null and not col.isPk else "NOT NULL "
-
         # 是否主键
         if col.isPk:
             temp += buildDefault(col)
         else:
+            # 数据类型
+            temp += (col.targetType + typeArgs + " ")
+            # 是否非空
+            temp += "NULL " if col.Null else "NOT NULL "
             temp += ("DEFAULT " + buildDefault(col)) if col.hasDefault else ""
 
         # 额外定义
@@ -315,9 +310,20 @@ cdef class TableGenerator(BaseSqlGenerator):
 
 cdef str buildDefault(BaseProperty col):
     if isinstance(col._default, BaseSqlGenerator):
-        return (<BaseSqlGenerator>col._default).Build()[0]
-    elif col._default == AutoIncrement:
-        return "AUTO_INCREMENT"
+        return (<BaseSqlGenerator> col._default).Build()[0]
+    elif col.isPk:
+        if col._default == AutoIncrement:
+            from NonameOrm.DB.DB import DB
+            return DB.getInstance().connector.autoFiledAnnounce(col)
+        else:
+            # 数据类型
+            temp = ''
+            typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
+            temp += (col.targetType + typeArgs + " ")
+            # 是否非空
+            temp += "NULL " if col.Null else "NOT NULL "
+            return temp
+
     elif isinstance(col._default, NullDefault) or col._default is NullDefault:
         return ''
     else:
@@ -327,7 +333,7 @@ cdef _processValue(object data):
     if isinstance(data, bytes):
         return '1' if data == b'\x01' else '0'
     if isinstance(data, str):
-        return "'"+data+"'"
+        return "'" + data + "'"
     return str(data)
 
 cdef str BuildAlterColSql(str tableName, assignNode: ast.Assign):
