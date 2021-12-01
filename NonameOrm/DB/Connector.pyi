@@ -4,6 +4,8 @@ from aiomysql import Connection
 
 
 class BaseConnector:
+    isAsync: bool
+
     def process(self, *args, **kwargs):
         pass
 
@@ -21,7 +23,6 @@ class AioMysqlConnector(BaseConnector):
 
     def releaseCon(self, con: Connection) -> Task: ...
 
-    async def execute(self, sql: str, con: Connection = None, args: tuple=()): ...
+    async def execute(self, sql: str, con: Connection = None, args: tuple = ()): ...
 
-    async def asyncProcess(self, *args, **kwargs):...
-
+    async def asyncProcess(self, *args, **kwargs): ...

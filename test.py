@@ -4,6 +4,7 @@ import faker
 
 from NonameOrm.DB.Connector import AioMysqlConnector, AioSqliteConnector
 from NonameOrm.DB.DB import DB
+from NonameOrm.Ext.DataGenerator import data_task, GeneratorRunner
 from NonameOrm.Ext.Decorators import use_database
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty import *
@@ -18,7 +19,7 @@ from NonameOrm.Ext.PageAble import PageAble
 
 fake = Faker(loacale='zh_CN')
 
-logging.basicConfig(level=logging.ERROR, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -54,33 +55,37 @@ class User(DataModel):
 class abc:
 
     async def test(self):
-        name = fake.name()
-        await User.getAsyncExecutor().save(User(
-            username=name,
-            nickname=fake.name(),
-            password=fake.name(),
-            email=fake.ascii_email(),
-            person=Person(
-                phone=fake.phone_number(),
-                real_name=fake.name(),
-                gender=True,
-                id_card=fake.phone_number()
-            )
-        ))
-
-        res = await PageAble(User).filter(User.username == name).findForeign().execute()
-
-        # res = await User.getAsyncExecutor().findAllBy(User.username == name)
+        res = await User.getAsyncExecutor().findAllBy()
         print(res)
-
 
 async def main():
     res = await abc().test()
     print(res)
 
 
+@data_task(count=10)
+def user_generator(time=1):
+    name = fake.name()
+
+    return User(
+        username=name,
+        nickname=fake.name(),
+        password=fake.name(),
+        email=fake.ascii_email(),
+        person=Person(
+            phone=fake.phone_number(),
+            real_name=fake.name(),
+            gender=True,
+            id_card=fake.phone_number()
+        )
+    )
+
+
 if __name__ == '__main__':
     DB.create(connector=AioSqliteConnector(loop=loop, path=':memory:')).GenerateTable()
+
+    GeneratorRunner(loop=loop).run()
+
 
     loop.run_until_complete(main())
     pass
