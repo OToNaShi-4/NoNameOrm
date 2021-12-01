@@ -18,7 +18,7 @@ from NonameOrm.Ext.PageAble import PageAble
 
 fake = Faker(loacale='zh_CN')
 
-logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
+logging.basicConfig(level=logging.ERROR, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -56,15 +56,22 @@ class abc:
     async def test(self):
         name = fake.name()
         await User.getAsyncExecutor().save(User(
-            username = name,
+            username=name,
             nickname=fake.name(),
-            password = fake.name(),
-            email = fake.ascii_email()
+            password=fake.name(),
+            email=fake.ascii_email(),
+            person=Person(
+                phone=fake.phone_number(),
+                real_name=fake.name(),
+                gender=True,
+                id_card=fake.phone_number()
+            )
         ))
 
-        res = await User.getAsyncExecutor().findAllBy(User.username == name)
-        print(res)
+        res = await PageAble(User).filter(User.username == name).findForeign().execute()
 
+        # res = await User.getAsyncExecutor().findAllBy(User.username == name)
+        print(res)
 
 
 async def main():

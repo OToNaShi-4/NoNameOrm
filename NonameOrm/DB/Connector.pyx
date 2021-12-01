@@ -13,13 +13,13 @@ from aiomysql import Cursor, DictCursor
 
 _logger = logging.getLogger(__package__)
 
-def dict_factory( cursor, tuple row):
-        d = {}
-        cdef int idx
+def dict_factory(cursor, tuple row):
+    d = {}
+    cdef int idx
 
-        for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
-        return d
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
 
 cdef class BaseConnector:
     def process(self, *args, **kwargs):
@@ -50,7 +50,7 @@ cdef class AioSqliteConnector(BaseConnector):
         if showLog:
             await self.con.set_trace_callback(_logger.debug)
 
-        self.con.row_factory = dict_factory
+        # self.con.row_factory = dict_factory
 
     @property
     def getCon(self):
@@ -60,10 +60,8 @@ cdef class AioSqliteConnector(BaseConnector):
     def paramsHolder(self):
         return '?'
 
-    def autoFiledAnnounce(self,col):
+    def autoFiledAnnounce(self, col):
         return 'INTEGER '
-
-
 
     def GenerateTable(self):
         self.loop.run_until_complete(generate_table())
@@ -74,10 +72,17 @@ cdef class AioSqliteConnector(BaseConnector):
 
     async def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
         cur = await self.con.cursor()
-
+        cur.useDict = dictCur
         sql = sql.replace('%s', '?')
         await cur.execute(sql, args)
-        return await cur.fetchall()
+
+        cdef tuple i
+
+        if dictCur:
+            # 当需要返回 dict 格式时
+            return [dict_factory(cur, i) for i in await cur.fetchall()]
+
+        return tuple(await cur.fetchall())
 
     async def asyncProcess(self, *args, **kwargs):
         cdef AsyncModelExecutor executor = kwargs.get('executor')
@@ -103,8 +108,13 @@ cdef class AioSqliteConnector(BaseConnector):
             await cur.execute(sqlTemp, data)
         else:
             await cur.executemany(sqlTemp, data)
+
+
         if sql.currentType != sqlType.INSERT:
-            res = await cur.fetchall()
+            if sql.currentType == sqlType.SELECT:
+                res = [dict_factory(cur, i) for i in await cur.fetchall()]
+            else:
+                res = await cur.fetchall()
         else:
             res = cur.lastrowid
 
@@ -138,7 +148,7 @@ cdef class AioMysqlConnector(BaseConnector):
     def config(self):
         return self._config
 
-    def autoFiledAnnounce(self,col):
+    def autoFiledAnnounce(self, col):
         cdef str typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
         return (col.targetType + typeArgs + " ") + 'AUTO_INCREMENT'
 
