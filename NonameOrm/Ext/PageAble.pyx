@@ -88,14 +88,7 @@ cdef class PageAble:
             .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}", args=tuple(args))
         return res[0][0]
 
-    async def execute(self):
-        """
-        链式调用尽头
-        正式进行数据获取
-
-        :return: Page
-        """
-
+    async def _asyncExecute(self):
         cdef:
             Page page = Page(self.page, self.pageSize)  # 创建空page实例
 
@@ -119,3 +112,15 @@ cdef class PageAble:
             await self.executor.findListForeignKey(<InstanceList> page.content)
 
         return page
+
+
+    async def execute(self):
+        """
+        链式调用尽头
+        正式进行数据获取
+
+        :return: Page
+        """
+        if DB.getInstance().connector.isAsync:
+            return self._asyncExecute()
+

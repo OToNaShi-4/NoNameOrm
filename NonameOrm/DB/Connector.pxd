@@ -6,7 +6,7 @@ cdef class BaseConnector:
     cdef:
         public object _pool
         ConnectorType Type
-        bint isAsync
+        public bint isAsync
         object selectCon
         public dict _config
         int count
