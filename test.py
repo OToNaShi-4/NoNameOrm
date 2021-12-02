@@ -12,7 +12,7 @@ import asyncio
 from faker import Faker
 
 loop = asyncio.new_event_loop()
-
+print(loop)
 asyncio.set_event_loop(loop)
 
 from NonameOrm.Ext.PageAble import PageAble
@@ -85,7 +85,6 @@ if __name__ == '__main__':
     DB.create(connector=AioSqliteConnector(loop=loop, path=':memory:')).GenerateTable()
 
     GeneratorRunner(loop=loop).run()
-
 
     loop.run_until_complete(main())
     pass

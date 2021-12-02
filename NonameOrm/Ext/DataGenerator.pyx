@@ -97,6 +97,7 @@ def create_task(
    """
     cdef RunnerTask task = RunnerTask(model=model, count=count, generator=generator)
 
+
     if group:
         if group not in taskGroup: taskGroup[group] = []  # 创建分组
         taskGroup[group].append(task)  # 加入分组

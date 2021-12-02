@@ -1,0 +1,6 @@
+astor~=0.8.1
+Faker~=9.8.3
+setuptools~=57.4.0
+Cython~=0.29.24
+aiomysql
+aiosqlite
