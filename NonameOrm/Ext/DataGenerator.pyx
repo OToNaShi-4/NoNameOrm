@@ -4,7 +4,7 @@ from typing import Type, Optional, Union, Callable, Dict, List
 from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.DataModel cimport ModelInstance
-from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
+from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor, ModelExecutor
 
 cdef list tasks = []  # 任务列表
 
@@ -26,6 +26,24 @@ cdef class GeneratorRunner:
     def run(self):
         if DB.getInstance().connector.isAsync:
             self.loop.run_until_complete(self.arun())
+        else:
+            self._run()
+
+    cdef _run(self):
+        cdef:
+            int index, time
+            RunnerTask task
+            ModelInstance instance
+            ModelExecutor executor
+
+        for index in range(len(tasks)):
+            task: RunnerTask = tasks[index]
+
+            executor = task.model.getExecutor()
+
+            for time in range(task.count):
+                instance = task.generator(time=time + 1)
+                executor.save(instance)
 
     async def arun(self):
         """
@@ -42,7 +60,7 @@ cdef class GeneratorRunner:
         for index in range(len(tasks)):
             task: RunnerTask = tasks[index]
 
-            executor = task.model.getAsyncExecutor()
+            executor = task.model.getExecutor()
 
             for time in range(task.count):
                 instance = task.generator(time=time + 1)
@@ -96,7 +114,6 @@ def create_task(
        :return:
    """
     cdef RunnerTask task = RunnerTask(model=model, count=count, generator=generator)
-
 
     if group:
         if group not in taskGroup: taskGroup[group] = []  # 创建分组

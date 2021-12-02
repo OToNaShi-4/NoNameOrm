@@ -2,7 +2,7 @@ import logging
 
 import faker
 
-from NonameOrm.DB.Connector import AioMysqlConnector, AioSqliteConnector
+from NonameOrm.DB.Connector import AioMysqlConnector, AioSqliteConnector, Sqlite3Connector
 from NonameOrm.DB.DB import DB
 from NonameOrm.Ext.DataGenerator import data_task, GeneratorRunner
 from NonameOrm.Ext.Decorators import use_database
@@ -82,9 +82,10 @@ def user_generator(time=1):
 
 
 if __name__ == '__main__':
-    DB.create(connector=AioSqliteConnector(loop=loop, path=':memory:')).GenerateTable()
+    DB.create(connector=Sqlite3Connector(path=':memory:')).GenerateTable()
 
     GeneratorRunner(loop=loop).run()
 
-    loop.run_until_complete(main())
+    print(User.getExecutor().findAllBy())
+    # loop.run_until_complete(main())
     pass

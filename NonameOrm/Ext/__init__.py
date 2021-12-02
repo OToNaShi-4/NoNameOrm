@@ -15,7 +15,7 @@ log = logging.getLogger(__package__)
 typeMatcher = re.compile(r'\(.*\)')
 
 
-async def generate_table():
+async def async_generate_table():
     from NonameOrm.DB.DB import DB
     from NonameOrm.DB.Generator import TableGenerator
     from NonameOrm.Model.DataModel import DataModel, _DataModelMeta, MiddleDataModel
@@ -34,7 +34,38 @@ async def generate_table():
         await con.rollback()
         raise e
     await con.commit()
-    con.close()
+    await db.connector.releaseCon(con)
+
+
+def _generate_table():
+    from NonameOrm.DB.DB import DB
+    from NonameOrm.DB.Generator import TableGenerator
+    from NonameOrm.Model.DataModel import DataModel, _DataModelMeta, MiddleDataModel
+
+    modelList: List[DataModel] = _DataModelMeta.ModelList
+    db = DB.getInstance()
+    nameList: List[str] = db.connector.getTableNameList()
+
+    con = db.connector.getCon()
+    try:
+        for model in modelList:
+            if model.tableName in nameList or model == DataModel or model == MiddleDataModel:
+                continue
+            db.executeSql(*TableGenerator(model).Build(), con)
+    except Exception as e:
+        con.rollback()
+        raise e
+    con.commit()
+    db.connector.releaseCon(con)
+
+
+def generate_table():
+    from NonameOrm.DB.DB import DB
+
+    if DB.getInstance().connector.isAsync:
+        return async_generate_table()
+
+    return _generate_table()
 
 
 class Type(Enum):
@@ -51,7 +82,6 @@ class Type(Enum):
     tinyint = 'tinyint'
     tinytext = 'tinytext'
     bit = 'bit'
-
 
 
 class Null(Enum):

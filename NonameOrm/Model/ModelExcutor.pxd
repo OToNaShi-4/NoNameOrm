@@ -22,6 +22,8 @@ cdef class BaseModelExecutor:
     cdef InstanceList processSelect(self, list res)
     cdef processInsert(self, int res)
 
+cdef class ModelExecutor(BaseModelExecutor):
+    pass
 
 cdef class AsyncModelExecutor(BaseModelExecutor):
     pass

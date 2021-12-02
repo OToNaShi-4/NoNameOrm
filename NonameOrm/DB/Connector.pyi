@@ -5,6 +5,8 @@ from aiomysql import Connection as AsyncMysqlConnection
 
 from aiosqlite.core import Connection as AsyncSqliteConnection
 
+from NonameOrm.Model.ModelExcutor import AsyncModelExecutor
+
 
 class BaseConnector:
     """
@@ -21,7 +23,7 @@ class BaseConnector:
 
     def releaseCon(self, con: Any): ...
 
-    async def asyncProcess(self, *args, **kwargs):
+    def asyncProcess(self, *args, **kwargs):
         pass
 
 
@@ -37,6 +39,10 @@ class AioSqliteConnector(BaseConnector):
     async def execute(self, sql: str, con: Optional[AsyncSqliteConnection] = None, args: tuple = ()): ...
 
     def releaseCon(self, con: AsyncMysqlConnection) -> Awaitable: ...
+
+    async def asyncProcess(self,
+                           executor:AsyncModelExecutor,
+                           ): ...
 
     pass
 

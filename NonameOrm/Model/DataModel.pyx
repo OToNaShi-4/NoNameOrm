@@ -2,6 +2,7 @@ from typing import Optional, Type, List
 
 from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
+from NonameOrm.Model.ModelExcutor import ModelExecutor
 from NonameOrm.Model.ModelProperty import ForeignKey
 from .ModelProperty cimport *
 
@@ -150,6 +151,12 @@ class DataModel(_DataModel, metaclass=_DataModelMeta):
     @classmethod
     def getAsyncExecutor(cls, work=None) -> AsyncModelExecutor:
         return AsyncModelExecutor(cls, work)
+
+    @classmethod
+    def getExecutor(cls, work=None):
+        if DB.getInstance().connector.isAsync:
+            return cls.getAsyncExecutor(work)
+        return ModelExecutor(cls, work)
 
 
 class MiddleDataModel(DataModel):

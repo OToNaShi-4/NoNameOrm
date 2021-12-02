@@ -35,6 +35,90 @@ cdef class BaseConnector:
     def paramsHolder(self):
         return '%s'
 
+cdef class Sqlite3Connector(BaseConnector):
+    def __init__(self, str path, bint showLog = True):
+        self.isAsync = False
+        self.init_sqlite(path, showLog)
+
+    cdef init_sqlite(self, str path, bint showLog):
+        import sqlite3
+
+        self.con = sqlite3.connect(path)
+
+        if showLog:
+            self.con.set_trace_callback(_logger.debug)
+
+    def releaseCon(self, con):
+        pass
+
+    def getCon(self):
+        return self.con
+
+    @property
+    def paramsHolder(self):
+        return '?'
+
+    cpdef str autoFiledAnnounce(self, col):
+        return 'INTEGER '
+
+    def GenerateTable(self):
+        generate_table()
+
+    cpdef list getTableNameList(self):
+        cdef dict table
+
+        cur = self.con.execute('select tbl_name from sqlite_master where type = "table";')
+        return [table['name'] for table in cur.fetchall()]
+
+    def execute(self, str sql, con, bint dictCur=False, tuple args=()):
+        cur = self.con.cursor()
+        sql = sql.replace('%s', '?')
+
+        if not args: args = ()
+
+        cur.execute(sql, args)
+
+        cdef tuple i
+
+        if dictCur:
+            # 当需要返回 dict 格式时
+            return (dict_factory(cur, i) for i in cur.fetchall())
+
+        return tuple(cur.fetchall())
+
+    def process(self, ModelExecutor executor, con=None):
+
+        # 获取SQL生成器
+        cdef BaseSqlGenerator sql = executor.sql
+
+        # 获取数据库链接
+        cdef:
+            object res
+            str sqlTemp
+            object data
+
+        sqlTemp, data = sql.Build()
+
+        sqlTemp = sqlTemp.replace('%s', '?')
+
+        cur = self.con.cursor()
+
+        if isinstance(data, tuple):
+            cur.execute(sqlTemp, data)
+        else:
+            cur.executemany(sqlTemp, data)
+
+        if sql.currentType != sqlType.INSERT:
+            if sql.currentType == sqlType.SELECT:
+                res = [dict_factory(cur, i) for i in cur.fetchall()]
+            else:
+                res = cur.fetchall()
+        else:
+            res = cur.lastrowid
+
+        # 处理查询结果
+        return executor.process(res)
+
 cdef class AioSqliteConnector(BaseConnector):
     def __init__(self, loop: AbstractEventLoop, **kwargs):
         self.loop = loop
@@ -51,6 +135,9 @@ cdef class AioSqliteConnector(BaseConnector):
             await self.con.set_trace_callback(_logger.debug)
 
         # self.con.row_factory = dict_factory
+
+    async def releaseCon(self, con):
+        pass
 
     @property
     def getCon(self):
@@ -108,7 +195,6 @@ cdef class AioSqliteConnector(BaseConnector):
             await cur.execute(sqlTemp, data)
         else:
             await cur.executemany(sqlTemp, data)
-
 
         if sql.currentType != sqlType.INSERT:
             if sql.currentType == sqlType.SELECT:
