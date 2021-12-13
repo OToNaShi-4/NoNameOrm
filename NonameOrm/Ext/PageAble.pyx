@@ -42,7 +42,7 @@ cdef class PageAble:
         assert page > 0, "page参数必须为大于零的整数"
 
         self.target = target
-        self.executor = target.getAsyncExecutor()
+        self.executor = target.getExecutor()
         self.page = page
         self.pageSize = pageSize
         self.deep = findForeign
@@ -79,21 +79,21 @@ cdef class PageAble:
             self.pageSize = pageSize
         return self
 
-    async def _getCount(self):
+    def _getCount(self):
         cdef:
             str sqlTemp
             list args
         sqlTemp, args = SqlGenerator.build_where(self.executor.sql.whereCol)
-        cdef tuple res = await DB.getInstance() \
+        return DB.getInstance() \
             .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}", args=tuple(args))
-        return res[0][0]
+
 
     async def _asyncExecute(self):
         cdef:
             Page page = Page(self.page, self.pageSize)  # 创建空page实例
 
 
-        page.total = await self._getCount()  # 获取当前过滤条件下一共有多少条数据
+        page.total = (await self._getCount())[0][0]  # 获取当前过滤条件下一共有多少条数据
 
         # 计算总共有多少页数据
         page.totalPage = int(page.total / self.pageSize) + 1 if page.total % self.pageSize else int(page.total / self.pageSize)
@@ -113,8 +113,32 @@ cdef class PageAble:
 
         return page
 
+    cpdef Page _execute(self):
+        cdef:
+            Page page = Page(self.page, self.pageSize)  # 创建空page实例
 
-    async def execute(self):
+
+        page.total = self._getCount()[0][0]  # 获取当前过滤条件下一共有多少条数据
+
+        # 计算总共有多少页数据
+        page.totalPage = int(page.total / self.pageSize) + 1 if page.total % self.pageSize else int(page.total / self.pageSize)
+
+        if not page.total or self.page > page.totalPage:
+            # 若分页不可能存在数据则直接返回
+            return page
+
+        # 将分页载入Sql中
+        self.executor.sql.Limit(self.pageSize, self.pageSize * (self.page - 1))
+
+        page.content = self.executor.execute()  # 将查询结果放入page实例内
+
+        if self.deep and len(page.content):
+            # 判断是否有必要查找外键，若有则进行外键查找
+            self.executor.findListForeignKey(<InstanceList> page.content)
+
+        return page
+
+    def execute(self):
         """
         链式调用尽头
         正式进行数据获取
@@ -123,4 +147,5 @@ cdef class PageAble:
         """
         if DB.getInstance().connector.isAsync:
             return self._asyncExecute()
-
+        else:
+            return self._execute()

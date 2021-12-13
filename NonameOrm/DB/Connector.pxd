@@ -17,6 +17,7 @@ cdef class Sqlite3Connector(BaseConnector):
 
     cdef:
         object con
+        str path
 
     cdef init_sqlite(self, str path, bint showLog)
     cpdef str autoFiledAnnounce(self, col)

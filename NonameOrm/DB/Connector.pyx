@@ -1,10 +1,13 @@
 import asyncio
+import multiprocessing
+import threading
 from asyncio import AbstractEventLoop
 
 from NonameOrm.DB.Generator cimport  sqlType, BaseSqlGenerator
 from NonameOrm.DB.utils import SqliteContextManager
 from NonameOrm.Error.DBError import WriteOperateNotInAffairs
 from NonameOrm.Ext import generate_table
+import sqlite3
 
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
 import logging
@@ -12,6 +15,8 @@ import logging
 from aiomysql import Cursor, DictCursor
 
 _logger = logging.getLogger(__package__)
+
+lock = multiprocessing.Lock()
 
 def dict_factory(cursor, tuple row):
     d = {}
@@ -39,20 +44,23 @@ cdef class Sqlite3Connector(BaseConnector):
     def __init__(self, str path, bint showLog = True):
         self.isAsync = False
         self.init_sqlite(path, showLog)
+        self.path = path
 
     cdef init_sqlite(self, str path, bint showLog):
-        import sqlite3
-
-        self.con = sqlite3.connect(path)
+        self.con = sqlite3.connect(path, timeout=99999, check_same_thread=False)
 
         if showLog:
             self.con.set_trace_callback(_logger.debug)
 
     def releaseCon(self, con):
+        con.commit()
         pass
 
     def getCon(self):
-        return self.con
+        if threading.current_thread() == threading.main_thread():
+            return self.con
+        else:
+            return sqlite3.connect(self.path)
 
     @property
     def paramsHolder(self):
@@ -65,12 +73,12 @@ cdef class Sqlite3Connector(BaseConnector):
         generate_table()
 
     cpdef list getTableNameList(self):
-        cdef dict table
+        cdef tuple table
 
         cur = self.con.execute('select tbl_name from sqlite_master where type = "table";')
-        return [table['name'] for table in cur.fetchall()]
+        return [table[0] for table in cur.fetchall()]
 
-    def execute(self, str sql, con, bint dictCur=False, tuple args=()):
+    def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
         cur = self.con.cursor()
         sql = sql.replace('%s', '?')
 
@@ -96,23 +104,25 @@ cdef class Sqlite3Connector(BaseConnector):
             object res
             str sqlTemp
             object data
-
         sqlTemp, data = sql.Build()
 
         sqlTemp = sqlTemp.replace('%s', '?')
 
         cur = self.con.cursor()
 
-        if isinstance(data, tuple):
-            cur.execute(sqlTemp, data)
-        else:
-            cur.executemany(sqlTemp, data)
+        with lock:
+            if isinstance(data, tuple):
+                cur.execute(sqlTemp, data)
+            else:
+                cur.executemany(sqlTemp, data)
+            self.con.commit()
 
         if sql.currentType != sqlType.INSERT:
             if sql.currentType == sqlType.SELECT:
                 res = [dict_factory(cur, i) for i in cur.fetchall()]
             else:
                 res = cur.fetchall()
+
         else:
             res = cur.lastrowid
 

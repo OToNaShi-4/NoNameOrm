@@ -15,11 +15,11 @@ for i, j, k in os.walk('./'):
 setup(
         name='NonameOrm',
         python_requires='>=3.7.0',
-        version='0.0.5a',  # 包的版本
+        version='1.0.0',  # 包的版本
         author='OToNaShi-4',
         author_email='517431682@qq.com',
         url="https://gitee.com/otonashi-4/python_async_orm",
-        description="A Orm support asyncio",
+        description="A Orm support asyncio and sync",
         packages=["NonameOrm"],
         package_data={"NonameOrm": ["*.pyi", "**/*.pyi", "*.py", "*/*.py", "*.pxd", "*/*.pxd"]},
         ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}, ),

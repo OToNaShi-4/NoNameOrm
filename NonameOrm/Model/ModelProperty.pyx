@@ -149,7 +149,7 @@ cdef class BaseProperty:
     def __ge__(self, other) -> FilterListCell:
         return self.setFilter(other, BIGGER_EQUAL)
 
-    cdef FilterListCell setFilter(self, object other, Relationship relationship):
+    cpdef FilterListCell setFilter(self, object other, Relationship relationship):
         f = FilterListCell(self.name, col=self)
         if issubclass(BaseProperty, other.__class__):
             f.append(FilterListCell(other.name, col=other), relationship)
@@ -216,6 +216,18 @@ class StrProperty(BaseProperty):
         self._targetType = targetType
         if not self.typeArgs:
             self.typeArgs = (255,)
+
+    def like(self, str value):
+        return self.setFilter(value, LIKE)
+
+    def startsWith(self, str value):
+        return self.like(value + "%")
+
+    def endsWith(self, str value):
+        return self.like("%" + value)
+
+    def has(self, str value):
+        return self.like("%" + value + "%")
 
 
 class floatSupportType(Enum):

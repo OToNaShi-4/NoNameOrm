@@ -69,7 +69,7 @@ class PageAble:
         """
         pass
 
-    async def execute(self) -> Page:
+    def execute(self) -> Page:
         """
         链式调用尽头
         正式进行数据获取

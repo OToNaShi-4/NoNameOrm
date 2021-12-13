@@ -11,8 +11,9 @@ from NonameOrm.Model.ModelProperty import *
 import asyncio
 from faker import Faker
 
+from NonameOrm.DB.Generator import SqlGenerator
+
 loop = asyncio.new_event_loop()
-print(loop)
 asyncio.set_event_loop(loop)
 
 from NonameOrm.Ext.PageAble import PageAble
@@ -82,10 +83,14 @@ def user_generator(time=1):
 
 
 if __name__ == '__main__':
-    DB.create(connector=Sqlite3Connector(path=':memory:')).GenerateTable()
+    DB.create(connector=Sqlite3Connector(path=':memory:',showLog=False)).GenerateTable()
 
-    GeneratorRunner(loop=loop).run()
+    GeneratorRunner().run()
 
-    print(User.getExecutor().findAllBy())
+    sql = SqlGenerator().From(User)
+
+    print(User.getExecutor().findAllBy(User.nickname.has('a')))
+
+
     # loop.run_until_complete(main())
     pass

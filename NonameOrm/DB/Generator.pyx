@@ -17,6 +17,7 @@ cdef dict relationshipMap = {
     Relationship.NOTEQUAL: " != ",
     Relationship.BIGGER_EQUAL: " >= ",
     Relationship.SMALLER_EQUAL: " <= ",
+    Relationship.LIKE: " LIKE "
 }
 
 cdef dict joinTypeMap = {
@@ -45,7 +46,7 @@ cdef class CustomColAnnounce(BaseSqlGenerator):
 cdef class SqlGenerator(BaseSqlGenerator):
     def __init__(self):
         self.currentType = NONE
-        self.limit = ''
+        self.limit = ' '
         self.target = None
 
     def insert(self, model):
@@ -110,7 +111,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
             return self.build_delete()
 
     def Limit(self, int count, int offset) -> SqlGenerator:
-        self.limit = "limit %i, %i" % (offset, count)
+        self.limit = " limit %i, %i" % (offset, count)
         return self
 
     def orderBy(self, *args):
@@ -283,7 +284,6 @@ cdef class TableGenerator(BaseSqlGenerator):
         if sqlTemp.endswith(',\n'):
             sqlTemp = sqlTemp[:-2] + '\n'
         sqlTemp += ") ;"
-        print(sqlTemp)
         return sqlTemp,
 
     @staticmethod

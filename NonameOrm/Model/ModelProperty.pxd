@@ -28,7 +28,7 @@ cdef class BaseProperty:
     cdef public str desc(self)
     cdef public str asc(self)
 
-    cdef FilterListCell setFilter(self, object other, Relationship relationship)
+    cpdef FilterListCell setFilter(self, object other, Relationship relationship)
 
 cdef enum Relationship:
     AND
@@ -40,6 +40,7 @@ cdef enum Relationship:
     SMALLER_EQUAL
     NOTEQUAL
     NONE
+    LIKE
 
 cdef class FilterListCell:
     cdef public object value
