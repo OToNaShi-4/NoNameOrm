@@ -1,0 +1,9 @@
+include *.in
+include *.ini
+include *.rst
+include *.txt
+include LICENSE
+
+include *.so
+include *.pxd
+include *.pyd
