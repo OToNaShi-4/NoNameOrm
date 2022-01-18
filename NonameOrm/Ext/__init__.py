@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import os
 from enum import Enum
 from typing import List, TypedDict, Tuple, Dict
@@ -20,8 +21,11 @@ async def async_generate_table():
     from NonameOrm.DB.Generator import TableGenerator
     from NonameOrm.Model.DataModel import DataModel, _DataModelMeta, MiddleDataModel
 
-    modelList: List[DataModel] = _DataModelMeta.ModelList
     db = DB.getInstance()
+    while not db.connector.isReady:
+        await asyncio.sleep(0.3)
+
+    modelList: List[DataModel] = _DataModelMeta.ModelList
     nameList: List[str] = await db.connector.getTableNameList()
 
     con = await db.connector.getCon()
@@ -108,29 +112,29 @@ class ColAnnounce(TypedDict):
 
 
 typeMap: dict = {
-    Type.bigint.value: 'IntProperty',
-    Type.int.value: 'IntProperty',
-    Type.decimal.value: 'FloatProperty',
-    Type.json.value: 'JsonProperty',
-    Type.float.value: 'FloatProperty',
-    Type.text.value: 'StrProperty',
-    Type.longtext.value: 'StrProperty',
-    Type.tinyint.value: 'IntProperty',
-    Type.tinytext.value: 'StrProperty',
-    Type.varchar.value: 'StrProperty',
-    Type.bit.value: 'BoolProperty',
+    Type.bigint.value   : 'IntProperty',
+    Type.int.value      : 'IntProperty',
+    Type.decimal.value  : 'FloatProperty',
+    Type.json.value     : 'JsonProperty',
+    Type.float.value    : 'FloatProperty',
+    Type.text.value     : 'StrProperty',
+    Type.longtext.value : 'StrProperty',
+    Type.tinyint.value  : 'IntProperty',
+    Type.tinytext.value : 'StrProperty',
+    Type.varchar.value  : 'StrProperty',
+    Type.bit.value      : 'BoolProperty',
     Type.timestamp.value: 'TimestampProperty',
-    Type.datetime.value: 'TimestampProperty'
+    Type.datetime.value : 'TimestampProperty'
 }
 
 from NonameOrm.Model.ModelProperty import *
 
 supportTypeMap: Dict[str, type(Enum)] = {
-    'IntProperty': strSupportType,
-    'FloatProperty': floatSupportType,
-    'JsonProperty': jsonSupportType,
-    'StrProperty': strSupportType,
-    'BoolProperty': boolSupportType,
+    'IntProperty'      : strSupportType,
+    'FloatProperty'    : floatSupportType,
+    'JsonProperty'     : jsonSupportType,
+    'StrProperty'      : strSupportType,
+    'BoolProperty'     : boolSupportType,
     'TimestampProperty': timestampSupportType
 }
 

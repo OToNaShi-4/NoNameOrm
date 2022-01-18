@@ -12,6 +12,7 @@ cdef class BaseConnector:
         object selectCon
         public dict _config
         int count
+        public bint isReady
 
 cdef class Sqlite3Connector(BaseConnector):
 

@@ -10,6 +10,7 @@ from NonameOrm.Model.DataModel cimport ModelInstance, InstanceList
 from NonameOrm.Model.ModelProperty import ForeignType
 from pymysql import IntegrityError
 
+from NonameOrm.Error.QueryError import QueryResoutIsNotOne
 from .ModelProperty cimport *
 from NonameOrm.DB.DB cimport DB
 
@@ -74,6 +75,14 @@ cdef class BaseModelExecutor:
         if limit > 0:
             self.sql.limit(limit, offset)
         return  self.execute()
+
+    def findOneBy(self, FilterListCell Filter=None):
+        self.reset()
+        cdef list res = self.findAllBy(Filter)
+        if len(res) == 1:
+            return res[0]
+        else:
+            raise QueryResoutIsNotOne()
 
     def findAllBy(self, FilterListCell Filter=None):
         self.reset()
@@ -390,11 +399,17 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
         return instance
 
+    async def findOneBy(self, FilterListCell Filter=None):
+        self.reset()
+        cdef list res = await self.findAllBy(Filter)
+        if len(res) == 1:
+            return res[0]
+        else:
+            raise QueryResoutIsNotOne()
 
     async def save(self, instance):
         self.reset()
         self.__dict__['instance'] = instance
-
 
         cdef:
             BaseProperty cur  # 数据列指针

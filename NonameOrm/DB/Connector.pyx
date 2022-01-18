@@ -133,7 +133,10 @@ cdef class AioSqliteConnector(BaseConnector):
     def __init__(self, loop: AbstractEventLoop, **kwargs):
         self.loop = loop
         self.isAsync = True
-        loop.run_until_complete(self.init_sqlite(**kwargs))
+        if loop.is_running():
+            asyncio.create_task(self.init_sqlite(**kwargs))
+        else:
+            loop.run_until_complete(self.init_sqlite(**kwargs))
         self.isUsing = False
 
     async def init_sqlite(self, path: str, showLog: bool = True):
@@ -144,6 +147,7 @@ cdef class AioSqliteConnector(BaseConnector):
         if showLog:
             await self.con.set_trace_callback(_logger.debug)
 
+        self.isReady = True
         # self.con.row_factory = dict_factory
 
     async def releaseCon(self, con):
@@ -161,13 +165,20 @@ cdef class AioSqliteConnector(BaseConnector):
         return 'INTEGER '
 
     def GenerateTable(self):
-        self.loop.run_until_complete(generate_table())
+
+        if self.loop.is_running():
+            asyncio.create_task(generate_table())
+        else:
+            self.loop.run_until_complete(generate_table())
 
     async def getTableNameList(self):
-        cur = await self.con.execute('select tbl_name from sqlite_master where type = "table";')
-        return [table['name'] for table in await cur.fetchall()]
+        cur = await self.con.execute('select tbl_name as name from sqlite_master where type = "table";')
+        data = [dict_factory(cur, i) for i in await cur.fetchall()]
+        return [table['name'] for table in data]
 
     async def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
+        while not self.isReady:
+            await asyncio.sleep(0.3)
         cur = await self.con.cursor()
         cur.useDict = dictCur
         sql = sql.replace('%s', '?')
@@ -182,6 +193,9 @@ cdef class AioSqliteConnector(BaseConnector):
         return tuple(await cur.fetchall())
 
     async def asyncProcess(self, *args, **kwargs):
+
+        while not self.isReady:
+            await asyncio.sleep(0.3)
         cdef AsyncModelExecutor executor = kwargs.get('executor')
         assert isinstance(executor, AsyncModelExecutor), '需要传入executor参数,且必须为AsyncModelExecutor实例'
 
