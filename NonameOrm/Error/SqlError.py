@@ -9,7 +9,7 @@ class SqlInStanceError(BaseOrmError):
 
 class SqlMissingRelationshipError(BaseOrmError):
 
-    def _process(self, str a, str b):
+    def _process(self,  a,  b):
         self.msg = f'在{a}与{b}之间缺少了关系运算符'
 
 

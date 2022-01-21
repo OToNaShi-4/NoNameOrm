@@ -3,7 +3,9 @@ from typing import Optional, Type, List
 from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
 from NonameOrm.Model.ModelExcutor import ModelExecutor
-from NonameOrm.Model.ModelProperty import ForeignKey
+from NonameOrm.Model.ModelProperty import ForeignKey, ForeignType
+from pydantic import create_model
+
 from .ModelProperty cimport *
 
 cdef str get_lower_case_name(str text):
@@ -25,38 +27,102 @@ cdef class _DataModel:
 
 
 class _DataModelMeta(type):
-    ModelList: List['DataModel'] = []
+    """
+        数据模型元类
+        在生成数据模型子类时，将会在这对模型进行预处理操作
+    """
+    ModelList: List['DataModel'] = []  # 模型列表，存放所定义的所有模型
 
     def __new__(cls, str name, bases: tuple, attrs: dict, **kwargs):
+        # 根据模型类定义，得到表的定义内容，并进行归总
         attrs['col'], attrs['mapping'], attrs['fk'] = _DataModelMeta.getPropertyObj(cls, attrs)
+
+        # 判断当前模型是否定义了表名，若没有则根据模型类名生成表名
+        # 生成规则如下，去除Model结尾，并将名称转为蛇型命名
+        # 例子：UserWalletModel -> user_wallet
         if not attrs.get('tableName'):
             attrs['tableName'] = get_lower_case_name(name)
+
+        # 根据所得的定义，生成模型类
         Class = type.__new__(cls, name, bases, attrs)
+
+        # 将生成的模型类添加进模型列表
         _DataModelMeta.ModelList.append(Class)
+
+        # 往模型里注入相关的内容
+        # 注入模型实例类到模型类的  modelInstance  成员中
         setattr(Class, 'modelInstance', _DataModelMeta.buildModelInstance(Class, attrs['col'], name))
+        # 注入Pydantic模型到模型类的  MODEL  成员中
+        setattr(Class, 'MODEL', _DataModelMeta.buildPydanticModel(Class, attrs['col'], name, attrs['fk']))
         return Class
 
     @staticmethod
     def buildModelInstance(cls, list cols: List[BaseProperty], str name) -> Type[ModelInstance]:
+        """
+            在这里会生成模型的 模型实例类
+        """
         cdef dict temp = dict()
 
         return type(name + 'Instance', (ModelInstance,), {'object': cls, '_temp': {}})
 
     @staticmethod
+    def buildPydanticModel(cls, list cols: List[BaseProperty], str name, list fk: List[ForeignKey]):
+        """
+            以数据模型为基础
+            生成Pydantic模型
+        """
+        cdef:
+            BaseProperty prop
+            dict types = {}
+            int index
+            list temp
+
+        # 处理字段类型声明
+        for index in range(len(cols)):
+            prop = cols[index]
+            temp = [Optional[prop._Type] if prop.Null else prop._Type]
+            if prop.hasDefault:
+                temp.append(prop.Default)
+            else:
+                temp.append(Ellipsis)
+            types[prop.name] = tuple(temp)
+
+        # 处理外键类型声明
+        for foregin in fk:
+            if foregin['Type'] == ForeignType.ONE_TO_ONE:
+                types[foregin['name']] = (Optional[foregin['target'].MODEL], None)
+            else:
+                types[foregin['name']] = (List[foregin['target'].MODEL], [])
+
+        Class = create_model(name, **types)
+
+        # 往类里注入魔法方法，使其支持字典的部分特性
+        setattr(Class, '__getitem__', lambda self, item: getattr(self, item))  # 使模型可以通过['xxx']访问成员
+        setattr(Class, '__setitem__', lambda self, item, value: setattr(self, item, value))  # 使模型可以通过 x['xx'] = xxx 来变更成员
+        setattr(Class, 'get', lambda self, item, default: getattr(self, item))  # 使模型可以使用get('xxx',xxx)获取成员
+        setattr(Class, '__contains__', lambda self, item: hasattr(self, item))  # 使模型可以使用 in 操作附判断是否含有成员
+        return Class
+
+    @staticmethod
     def getPropertyObj(type cls, attrs: dict):
-        cdef list temp = []
-        cdef list fk = []
-        cdef dict mapping = {}
+        """
+            根据表定义，将相关的property 和 外键
+            进行归类并返回
+            同时返回他们 名字 与 其本身的映射字典
+        """
+        cdef list property_list = []  # 字段列表
+        cdef list fk = []  # 外键列表
+        cdef dict mapping = {}  # 映射字典
         cdef str key
 
         for key, item in attrs.items():
             if isinstance(item, BaseProperty):
-                temp.append(item)
+                property_list.append(item)
                 mapping[key] = item
             elif isinstance(item, ForeignKey):
                 fk.append(item)
                 mapping[key] = item
-        return temp, mapping, fk
+        return property_list, mapping, fk
 
 
 cdef class ModelInstance(dict):

@@ -3,6 +3,7 @@ from typing import Type, Optional, List, Tuple, Dict, Union
 from NonameOrm.DB.DB import DB
 from NonameOrm.Model.ModelExcutor import AsyncModelExecutor, ModelExecutor
 from NonameOrm.Model.ModelProperty import BaseProperty, ForeignKey
+from pydantic import BaseModel
 
 
 class ModelInstance(dict):
@@ -30,6 +31,7 @@ class DataModel(_DataModel, ModelInstance, metaclass=_DataModelMeta):
     pkName: Optional[str] = None
     pkCol: Optional[BaseProperty] = None
     fk: List[ForeignKey]
+    MODEL: Union[DataModel, BaseModel]
 
     def __new__(cls, *args, **kwargs) -> ModelInstance: ...
 

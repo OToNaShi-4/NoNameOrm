@@ -38,7 +38,6 @@ async def async_generate_table():
         await con.rollback()
         raise e
     await con.commit()
-    await db.connector.releaseCon(con)
 
 
 def _generate_table():

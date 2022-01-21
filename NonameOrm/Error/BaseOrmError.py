@@ -1,4 +1,4 @@
-class BaseOrmError(BaseException):
+class BaseOrmError(Exception):
     msg: str
 
     def __init__(self, *args, **kwargs):

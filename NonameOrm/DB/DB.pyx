@@ -1,5 +1,7 @@
 # from typing import Coroutine, Callable
 #
+from typing import Generic, TypeVar
+
 from NonameOrm.Error.DBError import DBInstanceCreateError, DBInstanceError
 
 cdef public DB instance = None
@@ -29,6 +31,10 @@ cdef class DB:
         return self._connector
 
     @property
+    def getCon(self):
+        return self._connector.getCon()
+
+    @property
     def execute(self):
         if self._connector.isAsync:
             return self.connector.asyncProcess
@@ -56,3 +62,5 @@ cdef class DB:
         if not instance:
             raise
         return instance
+
+

@@ -3,7 +3,7 @@ from .BaseOrmError import BaseOrmError
 
 
 class PropertyUsageError(BaseOrmError):
-    def _process(self, type cls, *args, **kwargs) -> None:
+    def _process(self,  cls, *args, **kwargs) -> None:
         self.msg = f'Property类只能在Model类中被实例化，在{cls.__name__}中则无法正常工作'
 
 

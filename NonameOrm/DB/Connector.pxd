@@ -27,6 +27,7 @@ cdef class Sqlite3Connector(BaseConnector):
 cdef class AioMysqlConnector(BaseConnector):
     cdef :
         object loop
+        dict conMap
     pass
 
 
@@ -35,4 +36,7 @@ cdef class AioSqliteConnector(BaseConnector):
         object loop
         object con
         bint isUsing
+        str path
+        dict conMap
+
 
