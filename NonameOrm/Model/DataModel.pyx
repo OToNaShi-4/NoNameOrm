@@ -6,6 +6,7 @@ from NonameOrm.Model.ModelExcutor import ModelExecutor
 from NonameOrm.Model.ModelProperty import ForeignKey, ForeignType
 from pydantic import create_model
 
+from NonameOrm.Ext.Decorators import pydantic_support
 from .ModelProperty cimport *
 
 cdef str get_lower_case_name(str text):
@@ -97,10 +98,7 @@ class _DataModelMeta(type):
         Class = create_model(name, **types)
 
         # 往类里注入魔法方法，使其支持字典的部分特性
-        setattr(Class, '__getitem__', lambda self, item: getattr(self, item))  # 使模型可以通过['xxx']访问成员
-        setattr(Class, '__setitem__', lambda self, item, value: setattr(self, item, value))  # 使模型可以通过 x['xx'] = xxx 来变更成员
-        setattr(Class, 'get', lambda self, item, default: getattr(self, item))  # 使模型可以使用get('xxx',xxx)获取成员
-        setattr(Class, '__contains__', lambda self, item: hasattr(self, item))  # 使模型可以使用 in 操作附判断是否含有成员
+        pydantic_support(Class)
         return Class
 
     @staticmethod
