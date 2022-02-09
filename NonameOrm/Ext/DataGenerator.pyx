@@ -1,3 +1,4 @@
+import asyncio
 import enum
 from typing import Type, Optional, Union, Callable, Dict, List
 
@@ -25,7 +26,10 @@ cdef class GeneratorRunner:
 
     def run(self):
         if DB.getInstance().connector.isAsync:
-            self.loop.run_until_complete(self.arun())
+            if self.loop.is_running():
+                self.loop.create_task(self.arun())
+            else:
+                self.loop.run_until_complete(self.arun())
         else:
             self._run()
 
@@ -51,6 +55,9 @@ cdef class GeneratorRunner:
 
         :return:
         """
+        while not DB.getInstance().connector.isReady:
+            await asyncio.sleep(0.3)
+
         cdef:
             int index, time
             RunnerTask task
@@ -60,11 +67,14 @@ cdef class GeneratorRunner:
         for index in range(len(tasks)):
             task: RunnerTask = tasks[index]
 
-            executor = task.model.getExecutor()
+            con = await DB.getInstance().connector.getCon()
+            executor = task.model.getExecutor(con)
 
             for time in range(task.count):
                 instance = task.generator(time=time + 1)
                 await executor.save(instance)
+
+            await con.commit()
 
 cdef class RunnerTask:
     """

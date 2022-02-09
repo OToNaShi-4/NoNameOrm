@@ -1,5 +1,5 @@
 from asyncio import Task
-from typing import Optional, Any, Awaitable
+from typing import Optional, Any, Awaitable, Dict
 
 from aiomysql import Connection as AsyncMysqlConnection
 
@@ -33,6 +33,9 @@ class AioSqliteConnector(BaseConnector):
 
         基于 aiosqlite 封装
     """
+
+    conMap:Dict[Task:AsyncSqliteConnection]
+
 
     async def getCon(self) -> AsyncSqliteConnection: ...
 

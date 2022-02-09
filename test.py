@@ -59,6 +59,7 @@ class abc:
         res = await User.getAsyncExecutor().findAllBy()
         print(res)
 
+
 async def main():
     res = await abc().test()
     print(res)
@@ -83,14 +84,13 @@ def user_generator(time=1):
 
 
 if __name__ == '__main__':
-    DB.create(connector=Sqlite3Connector(path=':memory:',showLog=False)).GenerateTable()
+    DB.create(connector=Sqlite3Connector(path=':memory:', showLog=False)).GenerateTable()
 
     GeneratorRunner().run()
 
     sql = SqlGenerator().From(User)
 
     print(User.getExecutor().findAllBy(User.nickname.has('a')))
-
 
     # loop.run_until_complete(main())
     pass

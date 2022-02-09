@@ -12,6 +12,7 @@ cdef class BaseConnector:
         object selectCon
         public dict _config
         int count
+        public bint isReady
 
 cdef class Sqlite3Connector(BaseConnector):
 
@@ -26,6 +27,7 @@ cdef class Sqlite3Connector(BaseConnector):
 cdef class AioMysqlConnector(BaseConnector):
     cdef :
         object loop
+        dict conMap
     pass
 
 
@@ -34,4 +36,7 @@ cdef class AioSqliteConnector(BaseConnector):
         object loop
         object con
         bint isUsing
+        str path
+        dict conMap
+
 

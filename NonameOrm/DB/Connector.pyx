@@ -1,7 +1,7 @@
 import asyncio
 import multiprocessing
 import threading
-from asyncio import AbstractEventLoop
+from asyncio import AbstractEventLoop, Task
 
 from NonameOrm.DB.Generator cimport  sqlType, BaseSqlGenerator
 from NonameOrm.DB.utils import SqliteContextManager
@@ -140,25 +140,46 @@ cdef class AioSqliteConnector(BaseConnector):
     def __init__(self, loop: AbstractEventLoop, **kwargs):
         self.loop = loop
         self.isAsync = True
-        loop.run_until_complete(self.init_sqlite(**kwargs))
+        self.init_sqlite(**kwargs)
         self.isUsing = False
+        self.conMap = {}
 
-    async def init_sqlite(self, path: str, showLog: bool = True):
-        import aiosqlite
-
-        self.con = await aiosqlite.connect(path)
-
-        if showLog:
-            await self.con.set_trace_callback(_logger.debug)
+    def init_sqlite(self, path: str, showLog: bool = True):
+        self.path = path
+        self.isReady = True
 
         # self.con.row_factory = dict_factory
 
-    async def releaseCon(self, con):
-        pass
+    def releaseCon(self, task: Task) -> None:
+        """
+            task call back
+        """
+        con = self.conMap.get(task)
+        print(task)
+        if task.exception():
+            # if the task run fail, roll back all the change
+            async def wrap():
+                await con.rollback()
+                await con.close()
+                del self.conMap[task]
+            asyncio.create_task(wrap())
+        else:
+            # if the task run success, commit all the change
+            async def wrap():
+                await con.commit()
+                await con.close()
+                del self.conMap[task]
+            asyncio.create_task(wrap())
 
-    @property
-    def getCon(self):
-        return SqliteContextManager(self.con).acquire
+    async def getCon(self):
+        import aiosqlite
+        current_task = asyncio.current_task()
+        con = self.conMap.get(current_task)
+        if not con:
+            con = await aiosqlite.connect(self.path)
+            current_task.add_done_callback(self.releaseCon)
+            self.conMap[current_task] = con
+        return con
 
     @property
     def paramsHolder(self):
@@ -168,14 +189,20 @@ cdef class AioSqliteConnector(BaseConnector):
         return 'INTEGER '
 
     def GenerateTable(self):
-        self.loop.run_until_complete(generate_table())
+        if self.loop.is_running():
+            asyncio.create_task(generate_table())
+        else:
+            self.loop.run_until_complete(generate_table())
 
     async def getTableNameList(self):
-        cur = await self.con.execute('select tbl_name from sqlite_master where type = "table";')
-        return [table['name'] for table in await cur.fetchall()]
+        cur = await (await self.getCon()).execute('select tbl_name as name from sqlite_master where type = "table";')
+        data = [dict_factory(cur, i) for i in await cur.fetchall()]
+        return [table['name'] for table in data]
 
     async def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
-        cur = await self.con.cursor()
+        while not self.isReady:
+            await asyncio.sleep(0.3)
+        cur = await (await self.getCon()).cursor()
         cur.useDict = dictCur
         sql = sql.replace('%s', '?')
         await cur.execute(sql, args)
@@ -189,6 +216,9 @@ cdef class AioSqliteConnector(BaseConnector):
         return tuple(await cur.fetchall())
 
     async def asyncProcess(self, *args, **kwargs):
+
+        while not self.isReady:
+            await asyncio.sleep(0.3)
         cdef AsyncModelExecutor executor = kwargs.get('executor')
         assert isinstance(executor, AsyncModelExecutor), '需要传入executor参数,且必须为AsyncModelExecutor实例'
 
@@ -206,7 +236,7 @@ cdef class AioSqliteConnector(BaseConnector):
 
         sqlTemp = sqlTemp.replace('%s', '?')
 
-        cur = await self.con.cursor()
+        cur = await (await self.getCon()).cursor()
 
         if isinstance(data, tuple):
             await cur.execute(sqlTemp, data)
@@ -231,15 +261,23 @@ cdef class AioMysqlConnector(BaseConnector):
         self.Type = AioMysql
         self.selectCon = None
         self.loop = loop
-        self._pool = loop.run_until_complete(self._init_mysql(*args, **kwargs))
+        self.conMap = {}
+        if not loop.is_running():
+            loop.run_until_complete(self._init_mysql(*args, **kwargs))
+        else:
+            loop.create_task(self._init_mysql(*args, **kwargs))
 
     async def _init_mysql(self, *args, **kwargs) -> None:
         import aiomysql
         pool = await aiomysql.create_pool(*args, **kwargs)
-        return pool
+        self.isReady = True
+        self._pool= pool
 
     def GenerateTable(self):
-        self.loop.run_until_complete(generate_table())
+        if self.loop.is_running():
+            self.loop.create_task(generate_table())
+        else:
+            self.loop.run_until_complete(generate_table())
         pass
 
     async def getTableNameList(self):
@@ -255,17 +293,32 @@ cdef class AioMysqlConnector(BaseConnector):
         cdef str typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
         return (col.targetType + typeArgs + " ") + 'AUTO_INCREMENT'
 
-    @property
-    def getCon(self):
+    async def getCon(self):
         """
         获取链接实例
 
         :return:
         """
-        return self._pool.acquire
+        task = asyncio.current_task()
+        if not self.conMap.get(task):
+            self.conMap[task] = await self._pool.acquire()
+            task.add_done_callback(self._releaseCon)
+        return self.conMap.get(task)
 
     async def getSelectCon(self):
         return await self._pool.acquire()
+
+    def _releaseCon(self, task: Task):
+        con = self.conMap.get(task)
+        if task.exception():
+            async def wrap():
+                await con.rollback()
+                await self._pool.release(con)
+        else:
+            async def wrap():
+                await con.commit()
+                await self._pool.release(con)
+        self.loop.create_task(wrap())
 
     def releaseCon(self, con):
         """
@@ -280,15 +333,10 @@ cdef class AioMysqlConnector(BaseConnector):
         cdef bint userSelectCon = False
         if not con:
             userSelectCon = True
-            con = await self.getSelectCon()
+            con = await self.getCon()
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql, args)
             res = await cur.fetchall()
-
-        if userSelectCon:
-            await con.commit()
-            self.releaseCon(con)
-
         return res
 
     async def asyncProcess(self, *args, **kwargs):
@@ -299,22 +347,16 @@ cdef class AioMysqlConnector(BaseConnector):
         # 获取SQL生成器
         cdef BaseSqlGenerator sql = executor.sql
 
-        # 判断非查询行为是否处于事务模式下
-        if sql.currentType != sqlType.SELECT and 'con' not in kwargs:
-            raise WriteOperateNotInAffairs()
-
         # 获取数据库链接
         cdef:
             object res
             str sqlTemp
-            list data
-            bint useSelectCon = False
+            tuple data
 
         if 'con' in kwargs:
             con = kwargs.get('con')
         else:
-            useSelectCon = True
-            con = await self.getSelectCon()
+            con = await self.getCon()
 
         async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
@@ -328,8 +370,5 @@ cdef class AioMysqlConnector(BaseConnector):
             else:
                 res = cur.lastrowid
 
-        if useSelectCon:
-            await con.commit()
-            self.releaseCon(con)
         # 处理查询结果
         return executor.process(res)
