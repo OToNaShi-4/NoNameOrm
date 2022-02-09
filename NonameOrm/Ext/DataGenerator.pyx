@@ -15,20 +15,29 @@ tasks: List['RunnerTask']
 taskGroup: Dict[Union[str, enum], List['RunnerTask']]
 
 cdef class GeneratorRunner:
-    cdef object loop
+    """
+        数据生成执行器
+        自动根据数据库链接实例的isSync 成员变量判断执行异步任务还是同步
+    """
+    cdef object loop # 事件循环实例
 
     def __init__(self, loop=None):
         self.loop = loop
         pass
 
     def run_group(self, *args):
+        """
+            执行任务组
+        """
         pass
 
     def run(self):
+        # 判断链接对象是否为异步链接
         if DB.getInstance().connector.isAsync:
-            if self.loop.is_running():
+            if self.loop.is_running(): # 判断事件循环是否已经启动了
                 self.loop.create_task(self.arun())
             else:
+                # 同步等待生成器处理完全部数据生成任务
                 self.loop.run_until_complete(self.arun())
         else:
             self._run()
@@ -116,7 +125,7 @@ def data_task(
 def create_task(
         generator: Callable,
         model: Optional[Type[DataModel]] = None,
-        count: Optional[int] = 1,
+        int count: Optional[int] = 1,
         group: Union[str, enum] = None):
     """
        创建 数据生成任务
