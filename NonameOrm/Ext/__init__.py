@@ -1,7 +1,7 @@
 import ast
 import os
 from enum import Enum
-from typing import List, TypedDict, Tuple, Dict
+from typing import List, Tuple, Dict
 
 import astor
 import re
@@ -98,13 +98,7 @@ class Extra(Enum):
     auto_increment = 'auto_increment'
 
 
-class ColAnnounce(TypedDict):
-    Field: str
-    Type: str
-    Null: Null
-    Key: Key
-    Default: str
-    Extra: Extra
+
 
 
 typeMap: dict = {
@@ -135,7 +129,7 @@ supportTypeMap: Dict[str, type(Enum)] = {
 }
 
 
-def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) -> ast.Module:
+def tableAnnounceToAstModule(colAnnounce: Tuple[dict], tableName: str) -> ast.Module:
     # 创建AST根节点
     module: ast.Module = ast.Module(body=[])
     # 创建导入节点并添加到根节点末尾
@@ -155,7 +149,7 @@ def tableAnnounceToAstModule(colAnnounce: Tuple[ColAnnounce], tableName: str) ->
     return module
 
 
-def colAnnounceToAstNode(colAnnounce: ColAnnounce) -> ast.stmt:
+def colAnnounceToAstNode(colAnnounce: dict) -> ast.stmt:
     return ast.Assign(
         targets=[ast.Name(id=colAnnounce['Field'], ctx=ast.Store)],
         value=_getColValueNode(colAnnounce),
@@ -163,7 +157,7 @@ def colAnnounceToAstNode(colAnnounce: ColAnnounce) -> ast.stmt:
     )
 
 
-def _getColValueNode(colAnnounce: ColAnnounce) -> ast.expr:
+def _getColValueNode(colAnnounce: dict) -> ast.expr:
     """
     用于创建数据列声明节点
 
@@ -236,7 +230,7 @@ async def generate_model(filePath: str):
     res: Tuple[Tuple[str]] = await db.executeSql(f"SELECT TABLE_NAME FROM information_schema.`TABLES` WHERE TABLE_SCHEMA = '{dbName}';")
     for i in range(len(res)):
         tableName: str = res[i][0]
-        colAnnounce: Tuple[ColAnnounce] = await db.executeSql(f'desc {tableName}', dictCur=True)
+        colAnnounce: Tuple[dict] = await db.executeSql(f'desc {tableName}', dictCur=True)
         await _saveAstModuleByTableName(tableName, colAnnounce, filePath)
 
 
@@ -255,7 +249,7 @@ async def autoGenerate(filePath: str):
     con = await db.connector.getCon()
     pyFiles = _getAllPyFilesByPath(filePath)
     for (tableName,) in tableTuple:
-        colAnnounce: Tuple[ColAnnounce] = await db.executeSql(f'desc {tableName}', dictCur=True)
+        colAnnounce: Tuple[dict] = await db.executeSql(f'desc {tableName}', dictCur=True)
         if pascal_case(tableName) + '.py' in pyFiles:
             with open('', 'r') as f:
                 await _updateModelAst(ast.parse(f.read()), tableName, colAnnounce)
@@ -264,7 +258,7 @@ async def autoGenerate(filePath: str):
             await _saveAstModuleByTableName(tableName, colAnnounce, filePath)
 
 
-async def _updateModelAst(moduleAst: ast.Module, tableName: str, filePath: str, colAnnounceList: List[ColAnnounce]):
+async def _updateModelAst(moduleAst: ast.Module, tableName: str, filePath: str, colAnnounceList: List[dict]):
     """
     用于更新DataModel文件
 

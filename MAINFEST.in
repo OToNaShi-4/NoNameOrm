@@ -3,7 +3,15 @@ include *.ini
 include *.rst
 include *.txt
 include LICENSE
+include requirements.txt
+include README.md
 
 include *.so
 include *.pxd
 include *.pyd
+include *.pyx
+
+include */*.pyx
+include */*.so
+include */*.pxd
+include */*.pyd

@@ -40,6 +40,13 @@ cdef class BaseConnector:
     def paramsHolder(self):
         return '%s'
 
+cdef class PyMysqlConnector(BaseConnector):
+    def __init__(self):
+        self.isAsync = False
+
+    cdef init_pymysql(self):
+        pass
+
 cdef class Sqlite3Connector(BaseConnector):
     def __init__(self, str path, bint showLog = True):
         self.isAsync = False

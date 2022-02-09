@@ -44,7 +44,6 @@ class AioSqliteConnector(BaseConnector):
                            executor:AsyncModelExecutor,
                            ): ...
 
-    pass
 
 
 class AioMysqlConnector(BaseConnector):
