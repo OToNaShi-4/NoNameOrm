@@ -31,7 +31,7 @@ def read_requirements(filename):
 setup(
     name='NonameOrm',
     python_requires='>=3.7.0',
-    version='1.1.0',  # 包的版本
+    version='1.1.1',  # 包的版本
     author='OToNaShi-4',
     author_email='517431682@qq.com',
     url="https://gitee.com/otonashi-4/python_async_orm",
