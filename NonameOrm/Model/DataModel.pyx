@@ -93,8 +93,7 @@ class _DataModelMeta(type):
             if foregin['Type'] == ForeignType.ONE_TO_ONE:
                 types[foregin['name']] = (Optional[foregin['target'].MODEL], None)
             else:
-                types[foregin['name']] = (List[foregin['target'].MODEL], [])
-
+                types[foregin['name']] = (List[foregin.directTarget.MODEL], [])
         Class = create_model(name, **types)
 
         # 往类里注入魔法方法，使其支持字典的部分特性

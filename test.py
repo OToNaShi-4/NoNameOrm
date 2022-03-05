@@ -23,6 +23,23 @@ fake = Faker(loacale='zh_CN')
 logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
+class Sku(DataModel):
+    id: int = IntProperty(default=auto_increment, pk=True, Null=False)
+    sku_id: str = StrProperty(typeArgs=(128,), Null=False)
+
+
+class TaskState(Enum):
+    enable = 'enable'
+    disable = 'disable'
+
+
+class Task(DataModel):
+    id: int = IntProperty(default=auto_increment, pk=True, Null=False)
+    product_id = StrProperty(typeArgs=(128,), Null=False)
+    name = StrProperty(typeArgs=(128,))
+    task_state: TaskState = StrProperty(typeArgs=(16,), Null=False, default=TaskState.disable.value)
+    watch_sku_list = ForeignKey(Sku, Type=ForeignType.ONE_TO_MANY)
+    product_sku_list = ForeignKey(Sku, Type=ForeignType.ONE_TO_MANY)
 
 class Person(DataModel):
     id = IntProperty(pk=True, Null=False)

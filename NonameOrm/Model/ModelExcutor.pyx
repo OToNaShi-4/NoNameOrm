@@ -9,6 +9,7 @@ from NonameOrm.Error.DBError import DeleteWithOutPrimaryKeyError, UpdateWithOutP
 from NonameOrm.Model.DataModel cimport ModelInstance, InstanceList
 from NonameOrm.Model.ModelProperty import ForeignType
 from pymysql import IntegrityError
+import sqlite3
 
 from NonameOrm.Error.QueryError import QueryResoutIsNotOne, QueryNotDefine
 from .ModelProperty cimport *
@@ -346,7 +347,9 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                 if fk.directTarget.tableName in path and instance[fk.bindCol.name] in path[fk.directTarget.tableName]:
                     # 查看当前外键关联下是否有已查询过的内容，有则直接返回
                     logging.info(f'当前外键{fk.name}已经查询过')
-                    instance[fk.name] = path[fk.directTarget.tableName][instance[fk.bindCol.name]]
+                    temp = path[fk.directTarget.tableName][instance[fk.bindCol.name]]
+                    if not isinstance(temp, list): temp = [temp]
+                    instance[fk.name] = temp
                     continue
                 else:
                     # 通过join中间表查询目标外键表
@@ -420,7 +423,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         try:
             self.sql.insert(self.model).values(*insertData)
             res = await self.execute()
-        except IntegrityError:
+        except (IntegrityError, sqlite3.IntegrityError):
             return await self.update(instance)
         # 外键插入
         from NonameOrm.Model.ModelProperty import ForeignType
@@ -455,16 +458,18 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         targetExc = fk.directTarget.getExecutor(self.work)
         middleExc = fk.middleModel.getExecutor(self.work)
         targetFk = fk.middleModel.getOtherFkBy(fk.owner)
+
+        # 先删除所有中间表关联项
         await middleExc.delete({fk.targetBindCol.name: instance[fk.bindCol.name]},
                                fk.targetBindCol == instance[fk.bindCol.name])
         for model in instance[fk.name]:
-            # await targetExc.save(model)
+            await targetExc.save(model)
             await middleExc.save({
                 fk.targetBindCol.name: instance[fk.bindCol.name],
                 targetFk.bindCol.name: model[targetFk.targetBindCol.name]
             })
 
-    async def update(self, instance: ModelInstance):
+    async def update(self, instance):
         if not instance[self.model.pkName]:
             raise UpdateWithOutPrimaryKeyError()
 
@@ -479,10 +484,26 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         for fk in self.model.fk:
             if fk.name in instance:
                 if fk.Type == ForeignType.ONE_TO_ONE:
-                    await fk.owner.getExecutor(self.work).update(instance[fk.name])
+                    await fk.target.getExecutor(self.work).save(instance[fk.name])
                     continue
-                for i in instance[fk.name]:
-                    await fk.owner.getExecutor(self.work).update(i)
+                elif fk.Type == ForeignType.ONE_TO_MANY:
+                    for i in instance[fk.name]:
+                        await fk.target.getExecutor(self.work).update(i)
+                elif fk.Type == ForeignType.MANY_TO_MANY:
+                    targetExc = fk.directTarget.getExecutor()
+                    middleExc = fk.middleModel.getExecutor()
+                    targetFk = fk.middleModel.getOtherFkBy(fk.owner)
+                    for i in instance[fk.name]:
+                        await targetExc.save(i)
+                    await middleExc.delete({fk.targetBindCol.name: instance[fk.bindCol.name]},
+                                           fk.targetBindCol == instance[fk.bindCol.name])
+
+                    for i in instance[fk.name]:
+                        await middleExc.save({
+                            fk.targetBindCol.name: instance[fk.bindCol.name],
+                            targetFk.bindCol.name: i[targetFk.targetBindCol.name]
+                        })
+
 
         return await self.execute()
 
