@@ -38,5 +38,5 @@ cdef class AioSqliteConnector(BaseConnector):
         bint isUsing
         str path
         dict conMap
-
+        bint showLog
 

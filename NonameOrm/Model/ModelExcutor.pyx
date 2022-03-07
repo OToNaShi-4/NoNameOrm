@@ -177,7 +177,7 @@ cdef class ModelExecutor(BaseModelExecutor):
                     continue
                 else:
                     # 通过join中间表查询目标外键表
-                    exc: AsyncModelExecutor = fk.directTarget.getExecutor()
+                    exc: ModelExecutor = fk.directTarget.getExecutor()
                     exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
                     instance[fk.name] = exc.findAllBy(
                         getattr(fk.middleModel, fk.owner.tableName + '_id') == instance[fk.bindCol.name])

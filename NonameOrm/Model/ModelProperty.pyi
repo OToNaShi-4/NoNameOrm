@@ -1,11 +1,24 @@
 from enum import Enum
-from typing import Any, TypedDict, Optional
+from typing import Any, TypedDict, Optional, Type
 
 from NonameOrm.DB.Generator import CustomColAnnounce
 from NonameOrm.Model.ModelProperty import FilterListCell
 
 from NonameOrm.Model import DataModel
 from NonameOrm.Model.DataModel import MiddleDataModel
+
+
+class NullDefault:
+    pass
+
+
+class AutoIncrement:
+    pass
+
+
+_null: NullDefault = NullDefault()
+
+auto_increment: Type[AutoIncrement] = AutoIncrement
 
 current_timestamp = CustomColAnnounce("current_timestamp")
 current_date = CustomColAnnounce("current_date")
@@ -87,10 +100,10 @@ class BaseProperty:
     def objName(self) -> str: ...
 
 
-class IntProperty(BaseProperty): ...
+class IntProperty(BaseProperty, int): ...
 
 
-class StrProperty(BaseProperty):
+class StrProperty(BaseProperty, str):
     def like(self, value: str) -> FilterListCell: ...
 
     def startsWith(self, value: str) -> FilterListCell: ...
@@ -100,16 +113,16 @@ class StrProperty(BaseProperty):
     def has(self, value: str) -> FilterListCell: ...
 
 
-class FloatProperty(BaseProperty): ...
+class FloatProperty(BaseProperty, float): ...
 
 
-class BoolProperty(BaseProperty): ...
+class BoolProperty(BaseProperty, bool): ...
 
 
-class JsonProperty(BaseProperty): ...
+class JsonProperty(BaseProperty, dict, list): ...
 
 
-class TimestampProperty(BaseProperty): ...
+class TimestampProperty(BaseProperty, str): ...
 
 
 class timestampSupportType(Enum):

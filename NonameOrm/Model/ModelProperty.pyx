@@ -125,10 +125,10 @@ cdef class BaseProperty:
     def toObjValue(self, value):
         return value
 
-    cdef public str desc(self):
+    def desc(self):
         return f"{self.model.tableName}.{self.name} DESC"
 
-    cdef public str asc(self):
+    def asc(self):
         return f"{self.model.tableName}.{self.name} ASC"
 
     def __eq__(self, other) -> FilterListCell:

@@ -179,7 +179,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         
         :return: orderBy 子句内容 
         """
-        if not orderList or len(orderList):
+        if not orderList or len(orderList) == 0:
             return ""
 
         cdef:
@@ -192,7 +192,8 @@ cdef class SqlGenerator(BaseSqlGenerator):
             orderTemp += orderList[i]
             if not i == length - 1:
                 orderTemp += ", "
-
+        print('123123123')
+        print(orderTemp)
         return orderTemp
 
     cdef tuple build_select(self):

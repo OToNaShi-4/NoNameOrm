@@ -147,6 +147,7 @@ cdef class AioSqliteConnector(BaseConnector):
     def init_sqlite(self, path: str, showLog: bool = True):
         self.path = path
         self.isReady = True
+        self.showLog = showLog
 
         # self.con.row_factory = dict_factory
 
@@ -155,7 +156,6 @@ cdef class AioSqliteConnector(BaseConnector):
             task call back
         """
         con = self.conMap.get(task)
-        print(task)
         if task.exception():
             # if the task run fail, roll back all the change
             async def wrap():
@@ -204,6 +204,7 @@ cdef class AioSqliteConnector(BaseConnector):
             await asyncio.sleep(0.3)
         cur = await (await self.getCon()).cursor()
         cur.useDict = dictCur
+        if self.showLog: logging.info(f"{sql} || params={args}")
         sql = sql.replace('%s', '?')
         await cur.execute(sql, args)
 
@@ -233,7 +234,7 @@ cdef class AioSqliteConnector(BaseConnector):
             bint useSelectCon = False
 
         sqlTemp, data = sql.Build()
-
+        if self.showLog: logging.info(f"{sqlTemp} || params={data}")
         sqlTemp = sqlTemp.replace('%s', '?')
 
         cur = await (await self.getCon()).cursor()
