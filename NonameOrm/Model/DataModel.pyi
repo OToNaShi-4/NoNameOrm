@@ -7,6 +7,8 @@ from pydantic import BaseModel
 
 
 class ModelInstance(dict):
+    object: DataModel
+
     def __init__(self, *args, **kwargs): ...
 
     def __getattribute__(self, name): ...
@@ -31,7 +33,7 @@ class DataModel(_DataModel, ModelInstance, metaclass=_DataModelMeta):
     pkName: Optional[str] = None
     pkCol: Optional[BaseProperty] = None
     fk: List[ForeignKey]
-    MODEL: Union[DataModel, BaseModel]
+    MODEL: Union[Type[DataModel], Type[BaseModel]]
 
     def __new__(cls, *args, **kwargs) -> ModelInstance: ...
 

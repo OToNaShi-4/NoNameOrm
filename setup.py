@@ -1,7 +1,7 @@
 # cython_ext: language_level=3
 # cython: c_string_type=unicode, c_string_encoding=utf8
 
-from setuptools import setup, Extension, _install_setup_requires
+from setuptools import setup, Extension
 import os
 
 from Cython.Build import cythonize
@@ -31,7 +31,7 @@ def read_requirements(filename):
 setup(
     name='NonameOrm',
     python_requires='>=3.7.0',
-    version='1.1.2',  # 包的版本
+    version='1.1.3',  # 包的版本
     author='OToNaShi-4',
     author_email='517431682@qq.com',
     url="https://gitee.com/otonashi-4/python_async_orm",

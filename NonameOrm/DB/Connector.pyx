@@ -176,6 +176,9 @@ cdef class AioSqliteConnector(BaseConnector):
         current_task = asyncio.current_task()
         con = self.conMap.get(current_task)
         if not con:
+            while True:
+                if len(self.conMap) < 20: break
+                await asyncio.sleep(0.1)
             con = await aiosqlite.connect(self.path)
             current_task.add_done_callback(self.releaseCon)
             self.conMap[current_task] = con
@@ -202,7 +205,7 @@ cdef class AioSqliteConnector(BaseConnector):
     async def execute(self, str sql, con=None, bint dictCur=False, tuple args=()):
         while not self.isReady:
             await asyncio.sleep(0.3)
-        cur = await (await self.getCon()).cursor()
+        cur = await con.cursor() if con else await (await self.getCon()).cursor()
         cur.useDict = dictCur
         if self.showLog: logging.info(f"{sql} || params={args}")
         sql = sql.replace('%s', '?')
@@ -237,7 +240,7 @@ cdef class AioSqliteConnector(BaseConnector):
         if self.showLog: logging.info(f"{sqlTemp} || params={data}")
         sqlTemp = sqlTemp.replace('%s', '?')
 
-        cur = await (await self.getCon()).cursor()
+        cur = await kwargs.get('con').cursor() if 'con' in kwargs else await (await self.getCon()).cursor()
 
         if isinstance(data, tuple):
             await cur.execute(sqlTemp, data)
@@ -272,7 +275,7 @@ cdef class AioMysqlConnector(BaseConnector):
         import aiomysql
         pool = await aiomysql.create_pool(*args, **kwargs)
         self.isReady = True
-        self._pool= pool
+        self._pool = pool
 
     def GenerateTable(self):
         if self.loop.is_running():

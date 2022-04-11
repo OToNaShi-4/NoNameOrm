@@ -195,7 +195,7 @@ cdef class ModelExecutor(BaseModelExecutor):
                         ins = instance[fk.name][i]
                         exc.findForeignKey(ins, deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
             else:
-                if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName]:
+                if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName] and fk.target is not self.model:
                     instance[fk.name] = path[fk.target.tableName][instance[fk.bindCol.name]]
                     continue
                 else:
@@ -340,7 +340,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
         for fk in self.model.fk:
             # 循环查找
-            if before == fk.directTarget.tableName:
+            if before == fk.directTarget.tableName or instance.get(fk.bindCol.name) is None:
                 continue
             if fk.Type == ForeignType.MANY_TO_MANY:
                 # 若外键类型为多对多
@@ -353,7 +353,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                     continue
                 else:
                     # 通过join中间表查询目标外键表
-                    exc: AsyncModelExecutor = fk.directTarget.getExecutor()
+                    exc: AsyncModelExecutor = fk.directTarget.getExecutor(self.work)
                     exc.sql.join(getattr(fk.directTarget, fk.owner.tableName))
                     instance[fk.name] = await exc.findAllBy(
                         getattr(fk.middleModel, fk.owner.tableName + '_id') == instance[fk.bindCol.name])
@@ -366,27 +366,27 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
 
                 if deep and len(instance[fk.name]):
                     # 深查找
-                    exc: AsyncModelExecutor = instance[fk.name][0].object.getExecutor()
+                    exc: AsyncModelExecutor = instance[fk.name][0].object.getExecutor(self.work)
                     for i in range(len(instance[fk.name])):
                         ins = instance[fk.name][i]
                         await exc.findForeignKey(ins, deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
             else:
-                if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName]:
+                if fk.target.tableName in path and instance[fk.bindCol.name] in path[fk.target.tableName] and fk.target is not self.model:
                     instance[fk.name] = path[fk.target.tableName][instance[fk.bindCol.name]]
                     continue
                 else:
-                    res = await fk.target.getExecutor().findAllBy(
+                    res = await fk.target.getExecutor(self.work).findAllBy(
                         fk.targetBindCol == instance[fk.bindCol.name])
                     if res and fk.Type == ForeignType.ONE_TO_ONE and res.len():
                         # 若为一对一关系则直接取结果集中的第一项作为数据放入实例
 
                         instance[fk.name] = res[0]
                         if deep:
-                            await instance[fk.name].object.getExecutor().findForeignKey(instance[fk.name], deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
+                            await instance[fk.name].object.getExecutor(self.work).findForeignKey(instance[fk.name], deep=True, path=path, clevel=clevel, level=level, before=self.model.tableName)
 
                     elif res and fk.Type == ForeignType.ONE_TO_MANY:
                         # 若为一对多关系，则直将结果集作为数据放入实例
-                        exc: AsyncModelExecutor = res[0].object.getExecutor()
+                        exc: AsyncModelExecutor = res[0].object.getExecutor(self.work)
                         instance[fk.name] = res
                         if deep:
                             for i in range(len(res)):
@@ -482,7 +482,7 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
         self.sql.update(self.model).set(*params).where(self.model.pkCol == instance[self.model.pkName])
         from NonameOrm.Model.ModelProperty import ForeignType
         for fk in self.model.fk:
-            if fk.name in instance:
+            if fk.name in instance and instance[fk.name] is not None:
                 if fk.Type == ForeignType.ONE_TO_ONE:
                     await fk.target.getExecutor(self.work).save(instance[fk.name])
                     continue
@@ -490,8 +490,8 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                     for i in instance[fk.name]:
                         await fk.target.getExecutor(self.work).update(i)
                 elif fk.Type == ForeignType.MANY_TO_MANY:
-                    targetExc = fk.directTarget.getExecutor()
-                    middleExc = fk.middleModel.getExecutor()
+                    targetExc = fk.directTarget.getExecutor(self.work)
+                    middleExc = fk.middleModel.getExecutor(self.work)
                     targetFk = fk.middleModel.getOtherFkBy(fk.owner)
                     for i in instance[fk.name]:
                         await targetExc.save(i)
@@ -503,7 +503,6 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
                             fk.targetBindCol.name: instance[fk.bindCol.name],
                             targetFk.bindCol.name: i[targetFk.targetBindCol.name]
                         })
-
 
         return await self.execute()
 

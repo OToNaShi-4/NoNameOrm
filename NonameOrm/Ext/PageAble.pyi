@@ -1,4 +1,4 @@
-from typing import List, Optional, TypedDict, Union
+from typing import List, Optional, TypedDict, Union, Awaitable
 
 from NonameOrm.Model.DataModel import DataModel, ModelInstance
 from NonameOrm.Model.ModelProperty import FilterListCell
@@ -69,7 +69,7 @@ class PageAble:
         """
         pass
 
-    def execute(self) -> Page:
+    def execute(self) -> Union[Page, Awaitable[Page]]:
         """
         链式调用尽头
         正式进行数据获取

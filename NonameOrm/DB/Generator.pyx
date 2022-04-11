@@ -1,7 +1,7 @@
 # cython_ext: language_level=3
 # cython: c_string_type=unicode, c_string_encoding=utf8
 import ast
-from typing import List
+from typing import List, Iterable, Union
 
 from NonameOrm.Error.SqlError import *
 from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell, NullDefault
@@ -9,20 +9,20 @@ from NonameOrm.Model.ModelProperty cimport Relationship
 from NonameOrm.Model.ModelProperty cimport AutoIncrement
 
 cdef dict relationshipMap = {
-    Relationship.AND: " AND ",
-    Relationship.OR: " OR ",
-    Relationship.EQUAL: " = ",
-    Relationship.BIGGER: " > ",
-    Relationship.SMALLER: " < ",
-    Relationship.NOTEQUAL: " != ",
-    Relationship.BIGGER_EQUAL: " >= ",
+    Relationship.AND          : " AND ",
+    Relationship.OR           : " OR ",
+    Relationship.EQUAL        : " = ",
+    Relationship.BIGGER       : " > ",
+    Relationship.SMALLER      : " < ",
+    Relationship.NOTEQUAL     : " != ",
+    Relationship.BIGGER_EQUAL : " >= ",
     Relationship.SMALLER_EQUAL: " <= ",
-    Relationship.LIKE: " LIKE "
+    Relationship.LIKE         : " LIKE "
 }
 
 cdef dict joinTypeMap = {
-    JOIN: "JOIN ",
-    LEFT_JOIN: "LEFT JOIN ",
+    JOIN      : "JOIN ",
+    LEFT_JOIN : "LEFT JOIN ",
     RIGHT_JOIN: "RIGHT JOIN ",
     INNER_JOIN: "INNER JOIN ",
 }
@@ -185,15 +185,13 @@ cdef class SqlGenerator(BaseSqlGenerator):
         cdef:
             int i
             int length = len(orderList)
-            str orderTemp = "order by "
+            str orderTemp = " order by "
 
 
         for i in range(length):
             orderTemp += orderList[i]
             if not i == length - 1:
                 orderTemp += ", "
-        print('123123123')
-        print(orderTemp)
         return orderTemp
 
     cdef tuple build_select(self):
@@ -215,7 +213,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         if self.joinList and len(self.joinList):
             return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", tuple(params)
         else:
-            return selectTemp + ' FROM ' + self.target + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", tuple(params)
+            return selectTemp + ' FROM ' + self.target + whereTemp + SqlGenerator.build_order(self.orderList) + self.limit + ";", tuple(params)
 
     cdef str build_join(self):
         cdef:
@@ -233,16 +231,25 @@ cdef class SqlGenerator(BaseSqlGenerator):
     cdef tuple build_where(FilterListCell whereCol):
         cdef str whereTemp = " WHERE "
         cdef list params = []
+        cdef:
+            tuple args
+
 
         if not whereCol:
             return '', params
         cdef FilterListCell cur = whereCol
-        if not cur.next:
+        if not cur.next and not isinstance(cur.value, BaseSqlGenerator):
             raise SqlInStanceError()
         while True:
-            if cur.next and cur.relationship == Relationship.NONE:
+            # 若过滤节点的内容为 sql 生成器， 则执行其build方法
+            if isinstance(cur.value, BaseSqlGenerator):
+                sql, args = cur.value.Build()
+                params.extend(args)
+                whereTemp += sql +  relationshipMap.get(cur.relationship, '')
+            elif cur.next and cur.relationship == Relationship.NONE:
                 raise SqlMissingRelationshipError(cur.value, str(cur.next))
-            whereTemp += SqlGenerator._getWhereCellStr(cur, params)
+            else:
+                whereTemp += SqlGenerator._getWhereCellStr(cur, params)
             if not cur.next:
                 break
             cur = cur.next
@@ -261,6 +268,55 @@ cdef class SqlGenerator(BaseSqlGenerator):
         else:
             params.append(cur.value)
             return " %s " + relationshipMap.get(cur.relationship, '')
+
+cdef class CustomSqlGenerator(BaseSqlGenerator):
+    """
+    自定义sql生成器
+    """
+    def __init__(self, str sql, tuple args):
+        self.sql = sql
+        self.args = args
+
+    cpdef public tuple Build(self):
+        return self.sql, self.args
+
+cdef class InOperatorGenerator(BaseSqlGenerator):
+    """
+        用于生成in操作符 对应的sql语句
+        可传入 模型实例， 非字典等其他出去
+    """
+
+    def __init__(self, others: Union[list, tuple], BaseProperty pro):
+        from NonameOrm.Model.DataModel import ModelInstance
+        # from NonameOrm.Error.DBError import InOperatorError
+
+        cdef:
+            int index
+            list temp = []
+        for index in range(len(others)):
+            item = others[index]
+            if isinstance(item, ModelInstance):
+                temp.append(item[item.object.pkName])
+            elif isinstance(item, (dict, list, tuple)):
+                raise
+            else:
+                temp.append(item)
+        self.temp = temp
+        self.property = pro
+
+    cpdef public tuple Build(self):
+        cdef:
+            str temp = ' ' + self.property.model.tableName + '.' + self.property.dbName + ' in ('
+            int index
+            list args = []
+
+        for index in range(len(self.temp)):
+            temp += '%s, '  # 使用%s占位符
+            args.append(self.temp[index])
+
+        temp = temp[0:-2] + ') '
+
+        return temp, tuple(args)
 
 cdef class TableGenerator(BaseSqlGenerator):
     def __init__(self, model):

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, TypedDict, Optional, Type
+from typing import Any, TypedDict, Optional, Type, Iterable
 
 from NonameOrm.DB.Generator import CustomColAnnounce
 from NonameOrm.Model.ModelProperty import FilterListCell
@@ -84,6 +84,10 @@ class BaseProperty:
     def __le__(self, other) -> FilterListCell: ...
 
     def __ge__(self, other) -> FilterListCell: ...
+
+    def within(self, other: Iterable) -> FilterListCell: ...
+
+    def is_null(self) -> FilterListCell: ...
 
     # def setFilter(self, other, relationship) -> FilterListCell: ...
 

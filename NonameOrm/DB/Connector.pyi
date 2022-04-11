@@ -1,4 +1,4 @@
-from asyncio import Task
+from asyncio import Task, AbstractEventLoop
 from typing import Optional, Any, Awaitable, Dict
 
 from aiomysql import Connection as AsyncMysqlConnection
@@ -34,8 +34,9 @@ class AioSqliteConnector(BaseConnector):
         基于 aiosqlite 封装
     """
 
-    conMap:Dict[Task:AsyncSqliteConnection]
+    conMap: Dict[Task:AsyncSqliteConnection]
 
+    def __init__(self, loop: AbstractEventLoop, path: str, showLog: bool = True): ...
 
     async def getCon(self) -> AsyncSqliteConnection: ...
 
@@ -44,9 +45,8 @@ class AioSqliteConnector(BaseConnector):
     def releaseCon(self, con: AsyncMysqlConnection) -> Awaitable: ...
 
     async def asyncProcess(self,
-                           executor:AsyncModelExecutor,
+                           executor: AsyncModelExecutor,
                            ): ...
-
 
 
 class AioMysqlConnector(BaseConnector):
@@ -55,6 +55,7 @@ class AioMysqlConnector(BaseConnector):
 
         基于 aiomysql 封装
     """
+
     def __init__(self, *args, **kwargs): ...
 
     @property

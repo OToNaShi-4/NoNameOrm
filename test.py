@@ -1,4 +1,5 @@
 import logging
+import time
 from time import sleep
 
 import aiosqlite
@@ -26,9 +27,5 @@ fake = Faker(loacale='zh_CN')
 logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s - %(funcName)s] %(message)s')
 logger = logging.getLogger(__name__)
 
-
 if __name__ == '__main__':
-    Task.name.desc()
-
-
-
+    print(SqlGenerator().select(*Task.col).From(Task).where(Task.id.within((1,2,3,4))).Build())

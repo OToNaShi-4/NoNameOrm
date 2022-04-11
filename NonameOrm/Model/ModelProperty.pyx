@@ -1,14 +1,15 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 # cython_ext: language_level=3
 import json
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Union
 
 from enum import Enum
 
 from NonameOrm.Error.PropertyError import PropertyVerifyError, PrimaryKeyOverLimitError, PropertyUsageError, \
     ForeignKeyDependError
 
-from NonameOrm.DB.Generator cimport CustomColAnnounce
+from NonameOrm.DB.Generator cimport CustomColAnnounce, InOperatorGenerator, CustomSqlGenerator
 
 cdef class NullDefault:
     pass
@@ -25,7 +26,7 @@ current_date = CustomColAnnounce("current_date")
 
 cdef class FilterListCell:
     def __init__(self, cell = '', Relationship relationship = Relationship.NONE, BaseProperty col = None):
-        if <str> cell == '':
+        if cell == '':
             raise
         self.value = cell
         self.relationship = relationship
@@ -39,6 +40,10 @@ cdef class FilterListCell:
         #     cell.value = self.col.toDBValue(cell.value)
         self.next = cell
         self.relationship = relationship
+        return self
+
+    def setValue(self, value) -> 'FilterListCell':
+        self.value = value
         return self
 
     def check(self):
@@ -98,6 +103,10 @@ cdef class BaseProperty:
     cpdef public bint sizeChecker(self, object value):
         return True
 
+    def is_null(self) -> FilterListCell:
+
+        return FilterListCell(CustomSqlGenerator(f'{self.model.tableName}.{self.dbName} IS NULL', ()), col=self)
+
     cpdef public bint verifier(self, object value):
         if isinstance(value, self._Type):
             return self.sizeChecker(value)
@@ -109,17 +118,19 @@ cdef class BaseProperty:
 
     def insertCell(self, value):
         return {
-            'col': self,
+            'col'  : self,
             'value': value
         }
 
     def updateCell(self, value):
         return {
-            'name': self.name,
+            'name' : self.name,
             'value': value
         }
 
     def toDBValue(self, value):
+        if value is None:
+            return 'null'
         return value
 
     def toObjValue(self, value):
@@ -148,6 +159,9 @@ cdef class BaseProperty:
 
     def __ge__(self, other) -> FilterListCell:
         return self.setFilter(other, BIGGER_EQUAL)
+
+    def within(self, other) -> FilterListCell:
+        return FilterListCell(InOperatorGenerator(other, self), col=self)
 
     cpdef FilterListCell setFilter(self, object other, Relationship relationship):
         f = FilterListCell(self.name, col=self)
@@ -294,15 +308,23 @@ class timestampSupportType(Enum):
 
 class TimestampProperty(BaseProperty):
     SupportType: timestampSupportType = timestampSupportType
-    Type = str
+    Type = datetime
 
     def _init(self, targetType: timestampSupportType = timestampSupportType.timestamp, *args, **kwargs):
         self._targetType = targetType
 
     def toDBValue(self, value):
+        if value is None:
+            return 'null'
+        if not isinstance(value, datetime) and isinstance(value, str):
+            value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
         return value
 
     def toObjValue(self, value):
+        if value is None or value == 'null':
+            return None
+        elif not isinstance(value, datetime):
+            value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
         return value
 
 

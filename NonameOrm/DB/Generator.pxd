@@ -48,8 +48,25 @@ cdef class SqlGenerator(BaseSqlGenerator):
     cdef str _getWhereCellStr(FilterListCell cur, list params)
     cdef str build_join(self)
 
+cdef class InOperatorGenerator(BaseSqlGenerator):
+    cdef list temp;
+    cdef BaseProperty property
+
+    cpdef public tuple Build(self)
+
 cdef class TableGenerator(BaseSqlGenerator):
     cdef object model
     cpdef public tuple Build(self)
     @staticmethod
     cdef str build_col(BaseProperty col)
+
+
+cdef class CustomSqlGenerator(BaseSqlGenerator):
+    """
+    自定义sql生成器
+    """
+    cdef:
+        str sql
+        tuple args
+
+    cpdef public tuple Build(self)
