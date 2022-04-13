@@ -45,7 +45,7 @@ setup(
         "NonameOrm": ["*.pyi", "**/*.pyi", "*.py", "*/*.py", "*.pxd", "*/*.pxd", '*/*.pyd', '*.pyd', '*.pyx', '*/*.pyx'],
         '.': ['requirements.txt']
     },
-    ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}, ),
+    ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}, nthreads=7),
     zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',

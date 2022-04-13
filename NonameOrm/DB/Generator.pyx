@@ -120,6 +120,8 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
     def join(self, object foreignKey, joinType: JoinType = JoinType.JOIN) -> SqlGenerator:
         self.joinList.append(JoinCell(foreignKey, joinType))
+        if foreignKey.target is not foreignKey.directTarget:
+            self.joinList.append(JoinCell(foreignKey.target.getOtherFkBy(foreignKey.owner), joinType))
         return self
 
     def leftJoin(self, object foreignKey) -> SqlGenerator:
@@ -245,7 +247,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
             if isinstance(cur.value, BaseSqlGenerator):
                 sql, args = cur.value.Build()
                 params.extend(args)
-                whereTemp += sql +  relationshipMap.get(cur.relationship, '')
+                whereTemp += sql + relationshipMap.get(cur.relationship, '')
             elif cur.next and cur.relationship == Relationship.NONE:
                 raise SqlMissingRelationshipError(cur.value, str(cur.next))
             else:

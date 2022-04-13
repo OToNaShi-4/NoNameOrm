@@ -28,4 +28,5 @@ logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s 
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
-    print(SqlGenerator().select(*Task.col).From(Task).where(Task.id.within((1,2,3,4))).Build())
+    # print(Task.watch_sku_list.Type)
+    print(SqlGenerator().select(*Task.col).From(Task).join(Task.watch_sku_list).where(Task.id.within((1,2,3,4))).Build())
