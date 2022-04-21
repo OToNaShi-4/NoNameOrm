@@ -5,7 +5,7 @@ NoNameOrm 是一个基于 Cython 开发的对象关系映射工具俗称ORM，�
 > 💡 : 有关Python的类型声明及相关功能，请参考[《Python官方文档》]()
 
 
-GITHUB：
+GITHUB：[https://github.com/OToNaShi-4/NoNameOrm.git](https://github.com/OToNaShi-4/NoNameOrm.git)
 GITEE：[https://gitee.com/otonashi-4/no-name-orm](https://gitee.com/otonashi-4/no-name-orm)
 
 ## NoNameOrm的优势
