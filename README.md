@@ -60,7 +60,7 @@ async def create_user(user: User.MODEL) -> User.MODEL: # 声明接受一个user�
 
 这时我们将 fastapi 启动就可以在 接口文档中看到我们上面所写的接口：
 
-![[FastApi实例1.png]]
+![](static/FastApi实例1.png)
 
 ### 6. 同时支持 Async 和 Sync
 在当下，异步(Async)已经是主流， NonameOrm 在开发之初就是奔着支持 **异步** 支持去的。
