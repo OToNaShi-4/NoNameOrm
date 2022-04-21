@@ -78,7 +78,7 @@ cdef class BaseModelExecutor:
 
     def findOneBy(self, FilterListCell Filter=None):
         self.reset()
-        cdef list res = self.findAllBy(Filter)
+        cdef InstanceList res = self.findAllBy(Filter)
         if len(res) == 1:
             return res[0]
         else:
@@ -512,3 +512,5 @@ cdef class AsyncModelExecutor(BaseModelExecutor):
             return await self.db.execute(executor=self, con=self.work)
         else:
             return await self.db.execute(executor=self)
+        pass
+

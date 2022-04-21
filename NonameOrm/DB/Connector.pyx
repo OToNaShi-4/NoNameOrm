@@ -1,5 +1,6 @@
 import asyncio
 import multiprocessing
+import sys
 import threading
 from asyncio import AbstractEventLoop, Task
 
@@ -155,20 +156,18 @@ cdef class AioSqliteConnector(BaseConnector):
         """
             task call back
         """
-        con = self.conMap.get(task)
+        con = self.conMap.pop(task)
         if task.exception():
             # if the task run fail, roll back all the change
             async def wrap():
                 await con.rollback()
                 await con.close()
-                del self.conMap[task]
             asyncio.create_task(wrap())
         else:
             # if the task run success, commit all the change
             async def wrap():
                 await con.commit()
                 await con.close()
-                del self.conMap[task]
             asyncio.create_task(wrap())
 
     async def getCon(self):
@@ -213,11 +212,9 @@ cdef class AioSqliteConnector(BaseConnector):
 
         cdef tuple i
 
-        if dictCur:
-            # 当需要返回 dict 格式时
-            return [dict_factory(cur, i) for i in await cur.fetchall()]
-
-        return tuple(await cur.fetchall())
+        res = [dict_factory(cur, i) for i in await cur.fetchall()] if dictCur else tuple(await cur.fetchall())
+        await cur.close()
+        return res
 
     async def asyncProcess(self, *args, **kwargs):
 
@@ -254,7 +251,7 @@ cdef class AioSqliteConnector(BaseConnector):
                 res = await cur.fetchall()
         else:
             res = cur.lastrowid
-
+        await cur.close()
         # 处理查询结果
         return executor.process(res)
 
@@ -313,7 +310,7 @@ cdef class AioMysqlConnector(BaseConnector):
         return await self._pool.acquire()
 
     def _releaseCon(self, task: Task):
-        con = self.conMap.get(task)
+        con = self.conMap.pop(task)
         if task.exception():
             async def wrap():
                 await con.rollback()
@@ -322,7 +319,8 @@ cdef class AioMysqlConnector(BaseConnector):
             async def wrap():
                 await con.commit()
                 await self._pool.release(con)
-        self.loop.create_task(wrap())
+
+        asyncio.create_task(wrap())
 
     def releaseCon(self, con):
         """
@@ -341,6 +339,7 @@ cdef class AioMysqlConnector(BaseConnector):
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql, args)
             res = await cur.fetchall()
+        await cur.close()
         return res
 
     async def asyncProcess(self, *args, **kwargs):

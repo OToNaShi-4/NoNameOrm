@@ -28,5 +28,11 @@ logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s 
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
+    DB.create(connector=Sqlite3Connector('test.db')).GenerateTable()
     # print(Task.watch_sku_list.Type)
-    print(SqlGenerator().select(*Task.col).From(Task).join(Task.watch_sku_list).where(Task.id.within((1,2,3,4))).Build())
+    # print(Task.watch_sku_list.Type.__class__)
+    Task.getExecutor().save(Task(name='test',product_id='123'))
+    for i in range(10000):
+        Task.getExecutor().findOneBy(Task.id == 1)
+
+    sleep(100)
