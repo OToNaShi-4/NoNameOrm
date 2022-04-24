@@ -265,8 +265,6 @@ cdef class AioMysqlConnector(BaseConnector):
         self.conMap = {}
         if not loop.is_running():
             loop.run_until_complete(self._init_mysql(*args, **kwargs))
-        else:
-            loop.create_task(self._init_mysql(*args, **kwargs))
 
     async def _init_mysql(self, *args, **kwargs) -> None:
         import aiomysql
@@ -301,6 +299,9 @@ cdef class AioMysqlConnector(BaseConnector):
         :return:
         """
         task = asyncio.current_task()
+        if not self.isReady:
+            await self._init_mysql(**self.config)
+
         if not self.conMap.get(task):
             self.conMap[task] = await self._pool.acquire()
             task.add_done_callback(self._releaseCon)
@@ -361,8 +362,13 @@ cdef class AioMysqlConnector(BaseConnector):
         else:
             con = await self.getCon()
 
+
+
         async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
+
+            if self.config.get('echo', False):
+                logging.info(f'{sqlTemp} || params={data}')
 
             if isinstance(data, tuple):
                 await cur.execute(sqlTemp, data)

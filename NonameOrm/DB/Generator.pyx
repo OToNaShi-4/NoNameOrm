@@ -152,7 +152,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
 
         # 将插入数据压入列表
         for cur in self.selectCol:
-            cols.append((<BaseProperty> cur.get('col')).name)
+            cols.append(f"""{self.target}.{(<BaseProperty> cur.get('col')).name}""")
             params.append(cur.get('value'))
 
         # 拼接完整sql语句
