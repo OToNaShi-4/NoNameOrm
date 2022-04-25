@@ -41,6 +41,11 @@ cdef class BaseConnector:
     def paramsHolder(self):
         return '%s'
 
+    @property
+    def con_type(slef):
+        return slef.Type
+
+
 cdef class PyMysqlConnector(BaseConnector):
     def __init__(self):
         self.isAsync = False
@@ -53,6 +58,7 @@ cdef class Sqlite3Connector(BaseConnector):
         self.isAsync = False
         self.init_sqlite(path, showLog)
         self.path = path
+        self.Type = Sqlite
 
     cdef init_sqlite(self, str path, bint showLog):
         self.con = sqlite3.connect(path, timeout=99999, check_same_thread=False)
@@ -144,6 +150,7 @@ cdef class AioSqliteConnector(BaseConnector):
         self.init_sqlite(**kwargs)
         self.isUsing = False
         self.conMap = {}
+        self.Type = Sqlite
 
     def init_sqlite(self, path: str, showLog: bool = True):
         self.path = path
@@ -259,7 +266,7 @@ cdef class AioMysqlConnector(BaseConnector):
     def __init__(self, loop: AbstractEventLoop, *args, **kwargs) -> None:
         self._config = kwargs
         self.isAsync = True
-        self.Type = AioMysql
+        self.Type = Mysql
         self.selectCon = None
         self.loop = loop
         self.conMap = {}
@@ -300,6 +307,7 @@ cdef class AioMysqlConnector(BaseConnector):
         """
         task = asyncio.current_task()
         if not self.isReady:
+            print('sjdoajdiojaiosdjasoij')
             await self._init_mysql(**self.config)
 
         if not self.conMap.get(task):

@@ -87,6 +87,13 @@ cdef class PageAble:
         return DB.getInstance() \
             .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}", args=tuple(args))
 
+    @property
+    def sql(slef):
+        return slef.executor.sql
+
+    def editSql(self, callable):
+        self.executor.editSql(callable)
+        return self
 
     async def _asyncExecute(self):
         cdef:

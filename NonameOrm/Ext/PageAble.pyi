@@ -1,5 +1,6 @@
-from typing import List, Optional, TypedDict, Union, Awaitable
+from typing import List, Optional, TypedDict, Union, Awaitable, Self, Callable, Type
 
+from NonameOrm.DB.Generator import SqlGenerator
 from NonameOrm.Model.DataModel import DataModel, ModelInstance
 from NonameOrm.Model.ModelProperty import FilterListCell
 
@@ -59,7 +60,7 @@ class PageAble:
     def orderBy(self, *order: List[str]) -> 'PageAble':
         pass
 
-    def setPage(self, page: int, pageSize: Optional[int] = 0) -> 'PageAble':
+    def setPage(self, page: int, pageSize: Optional[int] = 0) -> Self:
         """
         设置分页
 
@@ -68,6 +69,11 @@ class PageAble:
         :return: PageAble
         """
         pass
+
+    def editSql(self, callable: Callable[[SqlGenerator], None]) -> Self: ...
+
+    @property
+    def sql(self) -> SqlGenerator: ...
 
     def execute(self) -> Union[Page, Awaitable[Page]]:
         """

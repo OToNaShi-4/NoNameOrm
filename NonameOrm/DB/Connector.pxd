@@ -1,18 +1,19 @@
 from NonameOrm.Model.ModelExcutor cimport ModelExecutor
 
 cdef enum ConnectorType:
-    AioMysql
+    Mysql = 0
+    Sqlite = 1
 
 
 cdef class BaseConnector:
     cdef:
         public object _pool
-        ConnectorType Type
         public bint isAsync
         object selectCon
         public dict _config
         int count
         public bint isReady
+        public ConnectorType Type
 
 cdef class Sqlite3Connector(BaseConnector):
 
@@ -28,7 +29,6 @@ cdef class AioMysqlConnector(BaseConnector):
     cdef :
         object loop
         dict conMap
-    pass
 
 
 cdef class AioSqliteConnector(BaseConnector):

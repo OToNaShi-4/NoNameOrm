@@ -2,7 +2,6 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 import ast
 from typing import List, Iterable, Union
-
 from NonameOrm.Error.SqlError import *
 from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell, NullDefault
 from NonameOrm.Model.ModelProperty cimport Relationship
@@ -143,16 +142,21 @@ cdef class SqlGenerator(BaseSqlGenerator):
         return "DELETE FROM " + self.target + " " + whereTemp, tuple(params)
 
     cdef tuple build_insert(self):
+        from NonameOrm.DB.DB import DB
         cdef:
             str insertTemp = "INSERT INTO " + self.target + " "  # INSERT 语句
             dict cur  # 数据指针
             list params = []  # sql参数
             list cols = []
             int i
+            int ct = DB.getInstance()._connector.con_type
 
         # 将插入数据压入列表
         for cur in self.selectCol:
-            cols.append(f"""{self.target}.{(<BaseProperty> cur.get('col')).name}""")
+            if ct == 1:
+                cols.append(f"""'{(<BaseProperty> cur.get('col')).name}'""")
+            elif ct == 0:
+                cols.append(f"""{self.target}.{(<BaseProperty> cur.get('col')).name}""")
             params.append(cur.get('value'))
 
         # 拼接完整sql语句
@@ -213,7 +217,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         whereTemp, params = SqlGenerator.build_where(self.whereCol)
 
         if self.joinList and len(self.joinList):
-            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + self.limit + SqlGenerator.build_order(self.orderList) + ";", tuple(params)
+            return selectTemp + ' FROM ' + self.target + self.build_join() + whereTemp + SqlGenerator.build_order(self.orderList) + self.limit + ";", tuple(params)
         else:
             return selectTemp + ' FROM ' + self.target + whereTemp + SqlGenerator.build_order(self.orderList) + self.limit + ";", tuple(params)
 
