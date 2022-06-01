@@ -28,11 +28,15 @@ logging.basicConfig(level=logging.DEBUG, format='[ %(levelname)s - %(pathname)s 
 logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
-    DB.create(connector=Sqlite3Connector('test.db')).GenerateTable()
-    # print(Task.watch_sku_list.Type)
-    # print(Task.watch_sku_list.Type.__class__)
-    Task.getExecutor().save(Task(name='test',product_id='123'))
-    for i in range(10000):
-        Task.getExecutor().findOneBy(Task.id == 1)
+    # DB.create(connector=Sqlite3Connector('test.db')).GenerateTable()
+    # # print(Task.watch_sku_list.Type)
+    # # print(Task.watch_sku_list.Type.__class__)
+    # Task.getExecutor().save(Task(name='test',product_id='123'))
+    # for i in range(10000):
+    #     Task.getExecutor().findOneBy(Task.id == 1)
+    #
+    # sleep(100)
+    from NonameOrm.DB.Generator import Q
 
-    sleep(100)
+
+    # genertor = SqlGenerator(Task)

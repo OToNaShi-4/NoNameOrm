@@ -173,7 +173,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
             list whereParams
 
         for cur in self.updateCol:
-            updateTemp += cur['name'] + " = %s,"
+            updateTemp += '`' + cur['name'] + "` = %s,"
             params.append(cur['value'])
         whereTemp, whereParams = SqlGenerator.build_where(self.whereCol)
         return updateTemp[:-1] + whereTemp + ";", tuple(params + whereParams)
@@ -244,6 +244,7 @@ cdef class SqlGenerator(BaseSqlGenerator):
         if not whereCol:
             return '', params
         cdef FilterListCell cur = whereCol
+
         if not cur.next and not isinstance(cur.value, BaseSqlGenerator):
             raise SqlInStanceError()
         while True:
@@ -324,6 +325,53 @@ cdef class InOperatorGenerator(BaseSqlGenerator):
 
         return temp, tuple(args)
 
+cdef class QueryGroup(BaseSqlGenerator):
+    def __init__(self, FilterListCell query):
+        self.query = query
+        pass
+
+    cpdef public tuple Build(self):
+        cdef:
+            list args
+            str sql
+        sql, args = SqlGenerator.build_where(self.query)
+        return " (" + sql.replace('WHERE ', '') + ") ", tuple(args)
+
+cdef class FunctionCall(BaseSqlGenerator):
+    def __init__(self, str func_name, *args):
+        self.func_name = func_name
+        self.args = args
+
+    cpdef public tuple Build(self):
+        cdef:
+            str sql = self.func_name + '('
+            int index
+            tuple temp
+            BaseProperty pro
+            list params = []
+
+
+        for index in range(len(self.args)):
+            if isinstance(self.args[index], BaseSqlGenerator):
+                temp = self.args[index].Build()
+                sql += temp[0] + ", "
+                params += temp[1]
+            elif isinstance(self.args[index], BaseProperty):
+                pro = self.args[index]
+                sql += pro.model.tableName + '.' + pro.dbName + ", "
+            else:
+                sql += '%s, '
+                params.append(self.args[index])
+
+        sql = sql[0:-2] + ') '
+
+
+        return sql, tuple(params)
+
+
+def Q(FilterListCell query) -> FilterListCell:
+    return FilterListCell(QueryGroup(query))
+
 cdef class TableGenerator(BaseSqlGenerator):
     def __init__(self, model):
         self.model = model
@@ -352,7 +400,7 @@ cdef class TableGenerator(BaseSqlGenerator):
     @staticmethod
     cdef str build_col(BaseProperty col):
         cdef:
-            str temp = "   " + col.name + " "
+            str temp = "   `" + col.name + "` "
             str typeArgs = str(col.typeArgs).replace(",", "") if str(col.typeArgs).endswith(",)") else str(col.typeArgs) if len(col.typeArgs) else ''
 
 

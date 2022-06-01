@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, TypedDict, Optional, Type, Iterable
+from typing import Any, TypedDict, Optional, Type, Iterable, List, TypeVar
 
 from NonameOrm.DB.Generator import CustomColAnnounce
 from NonameOrm.Model.ModelProperty import FilterListCell
@@ -126,7 +126,11 @@ class BoolProperty(BaseProperty, bool): ...
 class JsonProperty(BaseProperty, dict, list): ...
 
 
-class TimestampProperty(BaseProperty, str): ...
+class TimestampProperty(BaseProperty, str):
+    @property
+    def date(self) -> FilterListCell: ...
+
+    ...
 
 
 class timestampSupportType(Enum):
@@ -167,7 +171,10 @@ class ForeignType(Enum):
     MANY_TO_MANY = 3
 
 
-class ForeignKey(dict):
+T = TypeVar('T')
+
+
+class ForeignKey(dict, List[T]):
     from NonameOrm import Model
     target: Model.DataModel.DataModel
     bindCol: BaseProperty
@@ -177,7 +184,7 @@ class ForeignKey(dict):
     middleModel: Optional[MiddleDataModel]
     name: str
 
-    def __init__(self, target, Type: ForeignType = ForeignType.ONE_TO_ONE, bindCol: Optional[BaseProperty] = None, targetBindCol: Optional[BaseProperty] = None): ...
+    def __init__(self, target: T, Type: ForeignType = ForeignType.ONE_TO_ONE, bindCol: Optional[BaseProperty] = None, targetBindCol: Optional[BaseProperty] = None): ...
 
     def __set_name__(self, owner, name): ...
 

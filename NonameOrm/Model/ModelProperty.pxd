@@ -19,7 +19,7 @@ cdef class BaseProperty:
     cdef public bint Null
     cdef public object _default
     cdef public object _targetType
-    cdef object model
+    cdef public object model
     cdef str define
     cdef public tuple typeArgs
 

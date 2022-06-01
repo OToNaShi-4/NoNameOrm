@@ -60,6 +60,12 @@ cdef class TableGenerator(BaseSqlGenerator):
     @staticmethod
     cdef str build_col(BaseProperty col)
 
+cdef class QueryGroup(BaseSqlGenerator):
+    cdef:
+        FilterListCell query
+
+    cdef public tuple Build(self)
+
 
 cdef class CustomSqlGenerator(BaseSqlGenerator):
     """
@@ -67,6 +73,13 @@ cdef class CustomSqlGenerator(BaseSqlGenerator):
     """
     cdef:
         str sql
+        tuple args
+
+    cpdef public tuple Build(self)
+
+cdef class FunctionCall(BaseSqlGenerator):
+    cdef:
+        str func_name
         tuple args
 
     cpdef public tuple Build(self)

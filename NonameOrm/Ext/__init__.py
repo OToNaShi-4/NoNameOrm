@@ -1,6 +1,7 @@
 import ast
 import asyncio
 import os
+import traceback
 from enum import Enum
 from typing import List, Tuple, Dict
 
@@ -21,14 +22,16 @@ async def async_generate_table():
     from NonameOrm.DB.Generator import TableGenerator
     from NonameOrm.Model.DataModel import DataModel, _DataModelMeta, MiddleDataModel
 
+
     db = DB.getInstance()
+    con = await db.connector.getCon()
+
     while not db.connector.isReady:
         await asyncio.sleep(0.3)
 
     modelList: List[DataModel] = _DataModelMeta.ModelList
     nameList: List[str] = await db.connector.getTableNameList()
 
-    con = await db.connector.getCon()
     try:
         for model in modelList:
             if model.tableName in nameList or model == DataModel or model == MiddleDataModel:
@@ -36,7 +39,8 @@ async def async_generate_table():
             await db.executeSql(*TableGenerator(model).Build(), con)
     except Exception as e:
         await con.rollback()
-        raise e
+        traceback.print_exception(e)
+
     await con.commit()
 
 
@@ -99,9 +103,6 @@ class Key(Enum):
 
 class Extra(Enum):
     auto_increment = 'auto_increment'
-
-
-
 
 
 typeMap: dict = {

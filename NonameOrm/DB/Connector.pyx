@@ -45,7 +45,6 @@ cdef class BaseConnector:
     def con_type(slef):
         return slef.Type
 
-
 cdef class PyMysqlConnector(BaseConnector):
     def __init__(self):
         self.isAsync = False
@@ -64,7 +63,7 @@ cdef class Sqlite3Connector(BaseConnector):
         self.con = sqlite3.connect(path, timeout=99999, check_same_thread=False)
 
         if showLog:
-            self.con.set_trace_callback(_logger.debug)
+            self.con.set_trace_callback(_logger.info)
 
     def releaseCon(self, con):
         con.commit()
@@ -263,12 +262,13 @@ cdef class AioSqliteConnector(BaseConnector):
         return executor.process(res)
 
 cdef class AioMysqlConnector(BaseConnector):
-    def __init__(self, loop: AbstractEventLoop, *args, **kwargs) -> None:
+    def __init__(self, loop: AbstractEventLoop, ehco:bool =False, *args, **kwargs) -> None:
         self._config = kwargs
         self.isAsync = True
         self.Type = Mysql
         self.selectCon = None
         self.loop = loop
+        self.ehco = ehco
         self.conMap = {}
         if not loop.is_running():
             loop.run_until_complete(self._init_mysql(*args, **kwargs))
@@ -284,7 +284,6 @@ cdef class AioMysqlConnector(BaseConnector):
             self.loop.create_task(generate_table())
         else:
             self.loop.run_until_complete(generate_table())
-        pass
 
     async def getTableNameList(self):
         dbName = self._config.get('db')
@@ -307,7 +306,6 @@ cdef class AioMysqlConnector(BaseConnector):
         """
         task = asyncio.current_task()
         if not self.isReady:
-            print('sjdoajdiojaiosdjasoij')
             await self._init_mysql(**self.config)
 
         if not self.conMap.get(task):
@@ -345,6 +343,10 @@ cdef class AioMysqlConnector(BaseConnector):
         if not con:
             userSelectCon = True
             con = await self.getCon()
+
+        if self.ehco:
+            logging.info(f'{sql} || params={args}')
+
         async with con.cursor(DictCursor if dictCur else Cursor) as cur:
             await cur.execute(sql, args)
             res = await cur.fetchall()
@@ -370,12 +372,10 @@ cdef class AioMysqlConnector(BaseConnector):
         else:
             con = await self.getCon()
 
-
-
         async with con.cursor(DictCursor if sql.currentType == sqlType.SELECT else Cursor) as cur:
             sqlTemp, data = sql.Build()
 
-            if self.config.get('echo', False):
+            if self.ehco:
                 logging.info(f'{sqlTemp} || params={data}')
 
             if isinstance(data, tuple):

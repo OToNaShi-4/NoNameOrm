@@ -1,12 +1,14 @@
 # cython_ext: language_level=3
 # cython: c_string_type=unicode, c_string_encoding=utf8
-from NonameOrm.DB.DB import DB
+from NonameOrm.DB.DB import DB, Generic, TypeVar
 from NonameOrm.DB.Generator cimport SqlGenerator
 from NonameOrm.Model.DataModel cimport InstanceList
 from NonameOrm.Model.DataModel import DataModel
 from NonameOrm.Model.ModelProperty cimport FilterListCell
 
 from NonameOrm.Ext.Dict cimport DictPlus
+
+T = TypeVar('T')
 
 cdef class Page(DictPlus):
     """
@@ -23,7 +25,10 @@ cdef class Page(DictPlus):
         self['content'] = content
         self['total'] = total
 
-cdef class PageAble:
+def PageAble(target, int page=1, int pageSize=10, bint findForeign=False):
+    return _PageAble(target, page, pageSize, findForeign)
+
+cdef class _PageAble:
     """
     分页控制器
 
@@ -83,9 +88,13 @@ cdef class PageAble:
         cdef:
             str sqlTemp
             list args
+
         sqlTemp, args = SqlGenerator.build_where(self.executor.sql.whereCol)
+
+        cdef str join_temp = self.executor.sql.build_join() if len(self.executor.sql.joinList) else ""
+
         return DB.getInstance() \
-            .executeSql(f"select count({self.target.pkName}) from {self.target.tableName} {sqlTemp}", args=tuple(args))
+            .executeSql(f"select count({self.target.tableName}.{self.target.pkName}) from {self.target.tableName} {join_temp} {sqlTemp}", args=tuple(args))
 
     @property
     def sql(slef):

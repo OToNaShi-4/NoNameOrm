@@ -14,6 +14,7 @@ cdef class BaseConnector:
         int count
         public bint isReady
         public ConnectorType Type
+        bint ehco
 
 cdef class Sqlite3Connector(BaseConnector):
 

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 from NonameOrm.Model import DataModel
 from NonameOrm.Model.ModelProperty import BaseProperty, FilterListCell, ForeignKey
@@ -58,3 +58,7 @@ class TableGenerator(BaseSqlGenerator):
 class CustomColAnnounce(BaseSqlGenerator):
     def __init__(self, sql: str): ...
 
+class QueryGroup(BaseSqlGenerator):
+    def __init__(self,  query:FilterListCell):...
+
+def Q(query: Union[bool, FilterListCell]) -> Union[QueryGroup,bool]:...

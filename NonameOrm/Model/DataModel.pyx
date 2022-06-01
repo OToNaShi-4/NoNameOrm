@@ -1,4 +1,4 @@
-from typing import Optional, Type, List
+from typing import Optional, Type, List, Union, TypeVar
 
 from NonameOrm.DB.DB cimport DB
 from NonameOrm.Model.ModelExcutor cimport AsyncModelExecutor
@@ -77,7 +77,6 @@ class _DataModelMeta(type):
             dict types = {}
             int index
             list temp
-
         # 处理字段类型声明
         for index in range(len(cols)):
             prop = cols[index]
@@ -85,17 +84,22 @@ class _DataModelMeta(type):
             if prop.hasDefault:
                 temp.append(prop.Default)
             else:
-                temp.append(Ellipsis)
+                temp.append(None)
             types[prop.name] = tuple(temp)
 
         # 处理外键类型声明
         for foregin in fk:
             if foregin['Type'] == ForeignType.ONE_TO_ONE:
-                types[foregin['name']] = (Optional[foregin['target'].MODEL], None)
+                if foregin.target == cls:
+                    types[foregin['name']] = (Optional[dict], None)
+                else:
+                    types[foregin['name']] = (Optional[foregin['target'].MODEL], None)
             else:
-                types[foregin['name']] = (List[foregin.directTarget.MODEL], [])
+                if foregin.directTarget == cls:
+                    types[foregin['name']] = (List[dict], [])
+                else:
+                    types[foregin['name']] = (List[foregin.directTarget.MODEL], [])
         Class = create_model(name, **types)
-
         # 往类里注入魔法方法，使其支持字典的部分特性
         pydantic_support(Class)
         return Class
@@ -235,3 +239,7 @@ class MiddleDataModel(DataModel):
     @classmethod
     def getOtherFkBy(cls, model) -> ForeignKey:
         return cls.fk[0] if cls.fk[0].target is not model else cls.fk[1]
+
+
+def get_executor(target, work=None):
+    return target.getExecutor(work)

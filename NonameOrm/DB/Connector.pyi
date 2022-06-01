@@ -1,5 +1,5 @@
 from asyncio import Task, AbstractEventLoop
-from typing import Optional, Any, Awaitable, Dict
+from typing import Optional, Any, Awaitable, Dict, Union
 
 from aiomysql import Connection as AsyncMysqlConnection
 
@@ -47,6 +47,10 @@ class AioSqliteConnector(BaseConnector):
     async def asyncProcess(self,
                            executor: AsyncModelExecutor,
                            ): ...
+
+
+class Sqlite3Connector(BaseConnector):
+    def __init__(self, path: str, showLog: bool = True): ...
 
 
 class AioMysqlConnector(BaseConnector):

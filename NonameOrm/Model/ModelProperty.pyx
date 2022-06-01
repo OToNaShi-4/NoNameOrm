@@ -1,15 +1,17 @@
 # cython: c_string_type=unicode, c_string_encoding=utf8
 # cython_ext: language_level=3
 import json
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional, Union
 
 from enum import Enum
 
+from dateutil import parser
+
 from NonameOrm.Error.PropertyError import PropertyVerifyError, PrimaryKeyOverLimitError, PropertyUsageError, \
     ForeignKeyDependError
 
-from NonameOrm.DB.Generator cimport CustomColAnnounce, InOperatorGenerator, CustomSqlGenerator
+from NonameOrm.DB.Generator cimport CustomColAnnounce, InOperatorGenerator, CustomSqlGenerator,FunctionCall
 
 cdef class NullDefault:
     pass
@@ -55,6 +57,24 @@ cdef class FilterListCell:
 
     def __or__(self, other):
         return self._add(other, OR)
+
+    def __eq__(self, other) -> FilterListCell:
+        return self._add(other, EQUAL)
+
+    def __ne__(self, other) -> FilterListCell:
+        return self._add(other, NOTEQUAL)
+
+    def __lt__(self, other) -> FilterListCell:
+        return self._add(other, SMALLER)
+
+    def __gt__(self, other) -> FilterListCell:
+        return self._add(other, BIGGER)
+
+    def __le__(self, other) -> FilterListCell:
+        return self._add(other, SMALLER_EQUAL)
+
+    def __ge__(self, other) -> FilterListCell:
+        return self._add(other, BIGGER_EQUAL)
 
     cpdef _add(self, object other, Relationship relationship):
         if issubclass(other.__class__, BaseProperty):
@@ -320,11 +340,15 @@ class TimestampProperty(BaseProperty):
             value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
         return value
 
+    @property
+    def date(self) -> FilterListCell:
+        return FilterListCell(FunctionCall('date', self),col=self)
+
     def toObjValue(self, value):
         if value is None or value == 'null':
             return None
-        elif not isinstance(value, datetime):
-            value = datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+        elif not isinstance(value, datetime) and not isinstance(value, date):
+            value = parser.parse(value)
         return value
 
 
@@ -392,8 +416,8 @@ class ForeignKey(dict):
             dict attrs = {}
 
         # 创建主键关联字段
-        attrs[self.owner.tableName + '_id'] = self.owner.pkCol.__class__()
-        attrs[self.target.tableName + '_id'] = self.target.pkCol.__class__()
+        attrs[self.owner.tableName + '_id'] = self.owner.pkCol.__class__(typeArgs=self.owner.pkCol.typeArgs)
+        attrs[self.target.tableName + '_id'] = self.target.pkCol.__class__(typeArgs=self.target.pkCol.typeArgs,)
 
         # 创建外键绑定字段
         attrs[self.owner.tableName] = ForeignKey(
@@ -425,6 +449,7 @@ class ForeignKey(dict):
         # 手动给目标表外键绑定所属关系
         fk['owner'] = self.target
         fk['name'] = self.owner.tableName
+        fk['target_name'] = self['name']
 
         # 手动将外键关联添加到对象模型外键列表中
         self.target.fk.append(fk)
@@ -436,8 +461,10 @@ class ForeignKey(dict):
         self['target'] = self['middleModel']
         self['targetBindCol'] = attrs[self.owner.tableName + '_id']
 
+
     def __set_name__(self, owner, name):
         self['name'] = name
+        self['target_name'] = owner.tableName
         self['owner'] = owner
         from NonameOrm.Model.DataModel import DataModel
         if not issubclass(owner, DataModel):
@@ -462,12 +489,18 @@ class ForeignKey(dict):
         else:
             if hasattr(self.target, self.owner.tableName):
                 return
-            setattr(self.target, self.owner.tableName, ForeignKey(
+
+            fk = ForeignKey(
                 self.owner,
                 ForeignType.ONE_TO_ONE,
                 bindCol=self.targetBindCol,
                 targetBindCol=self.bindCol
-            ))
+            )
+            fk['name'] = self.owner.tableName
+            fk['owner'] = self.target
+            fk['target_name'] = self['name']
+            setattr(self.target, self.owner.tableName, fk)
+            self.target.fk.append(getattr(self.target, self.owner.tableName))
 
     @property
     def directTarget(self):
