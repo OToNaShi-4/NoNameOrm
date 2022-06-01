@@ -1,4 +1,4 @@
-Faker~=9.8.3
+Faker
 astor~=0.8.1
 setuptools~=59.6.0
 Cython~=0.29.24
