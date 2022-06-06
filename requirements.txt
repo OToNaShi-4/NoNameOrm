@@ -1,6 +1,8 @@
-Faker~=9.8.3
-astor~=0.8.1
-setuptools~=59.6.0
+Faker
+astor
+setuptools
 Cython~=0.29.24
 case-convert
 wheel
+aiosqlite
+pydantic

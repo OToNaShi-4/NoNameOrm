@@ -31,7 +31,7 @@ def read_requirements(filename):
 setup(
     name='NonameOrm',
     python_requires='>=3.7.0',
-    version='1.2.0',  # 包的版本
+    version='1.2.2',  # 包的版本
     author='OToNaShi-4',
     author_email='517431682@qq.com',
     url="https://gitee.com/otonashi-4/python_async_orm",
@@ -45,7 +45,7 @@ setup(
         "NonameOrm": ["*.pyi", "**/*.pyi", "*.py", "*/*.py", "*.pxd", "*/*.pxd", '*/*.pyd', '*.pyd', '*.pyx', '*/*.pyx'],
         '.': ['requirements.txt']
     },
-    ext_modules=cythonize(ex, compiler_directives={'language_level': "3"}),
+    ext_modules=cythonize(ex, compiler_directives={'language_level': "3"},nthreads=3),
     zip_safe=False,
     classifiers=[
         'Intended Audience :: Developers',

@@ -6,7 +6,6 @@ from NonameOrm.Model.ModelExcutor import ModelExecutor
 from NonameOrm.Model.ModelProperty import ForeignKey, ForeignType
 from pydantic import create_model
 
-from NonameOrm.Ext.Decorators import pydantic_support
 from .ModelProperty cimport *
 
 cdef str get_lower_case_name(str text):
@@ -68,6 +67,8 @@ class _DataModelMeta(type):
 
     @staticmethod
     def buildPydanticModel(cls, list cols: List[BaseProperty], str name, list fk: List[ForeignKey]):
+        from NonameOrm.Ext.Decorators import pydantic_support
+
         """
             以数据模型为基础
             生成Pydantic模型
