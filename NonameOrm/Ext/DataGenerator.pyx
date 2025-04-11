@@ -125,7 +125,7 @@ def data_task(
 def create_task(
         generator: Callable,
         model: Optional[Type[DataModel]] = None,
-        int count: Optional[int] = 1,
+        int count = 1,
         group: Union[str, enum] = None):
     """
        创建 数据生成任务

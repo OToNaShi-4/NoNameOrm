@@ -1,8 +1,5 @@
 Faker
 astor
-setuptools
-Cython~=0.29.24
 case-convert
-wheel
 aiosqlite
 pydantic
